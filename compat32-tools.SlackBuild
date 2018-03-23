@@ -22,7 +22,7 @@
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-PRGNAM=compat32-tools
+PRGNAM=compat64-tools
 VERSION=3.7
 ARCH=noarch
 TAG=${TAG:-alien}
@@ -34,28 +34,28 @@ PKG=$TMP/package-$PRGNAM
 rm -rf $PKG
 mkdir -p $TMP $PKG
 
-# Add the scripts that change your environment for 32bit compilation
+# Add the scripts that change your environment for 64-bit compilation
 # (but do not make it executable by default):
 mkdir -p $PKG/etc/profile.d
-install -o root -m644 $CWD/32dev.sh $PKG/etc/profile.d/32dev.sh
-install -o root -m644 $CWD/32dev.csh $PKG/etc/profile.d/32dev.csh
+install -o root -m644 $CWD/64dev.sh $PKG/etc/profile.d/64dev.sh
+install -o root -m644 $CWD/64dev.csh $PKG/etc/profile.d/64dev.csh
 
-# Add the 'gcc' wrapper script to be used for building 32bit software:
-mkdir -p $PKG/usr/bin/32
-install -o root -m755 $CWD/gccwrapper $PKG/usr/bin/32/gcc
+# Add the 'gcc' wrapper script to be used for building 64-bit software:
+mkdir -p $PKG/usr/bin/64
+install -o root -m755 $CWD/gccwrapper $PKG/usr/bin/64/gcc
 
-# Add the 'gfortran' wrapper script to be used for building 32bit software:
-mkdir -p $PKG/usr/bin/32
-install -o root -m755 $CWD/gfortranwrapper $PKG/usr/bin/32/gfortran
+# Add the 'gfortran' wrapper script to be used for building 64-bit software:
+mkdir -p $PKG/usr/bin/64
+install -o root -m755 $CWD/gfortranwrapper $PKG/usr/bin/64/gfortran
 
 # Add symlinks for cc and g++ stubs:
-( cd $PKG/usr/bin/32;
+( cd $PKG/usr/bin/64;
   ln -s gcc g++;
   ln -s gcc cc;
 )
 
 # Add symlinks for fortran stubs:
-( cd $PKG/usr/bin/32;
+( cd $PKG/usr/bin/64;
   ln -s gfortran f77;
   ln -s gfortran f95;
   ln -s gfortran g77;
@@ -63,12 +63,12 @@ install -o root -m755 $CWD/gfortranwrapper $PKG/usr/bin/32/gfortran
   ln -s gfortran fortran;
 )
 
-# Add the two scripts that will facilitate converting 32bit Slackware
-# packages to a format that is suitable to be installed on 64bit Slackware.
+# Add the two scripts that will facilitate converting 64-bit Slackware
+# packages to a format that is suitable to be installed on 32-bit Slackware.
 # Since these scripts should be run as root, dump them into a sbin directory:
 mkdir -p $PKG/usr/sbin
-install -m755 -o root $CWD/convertpkg-compat32 $PKG/usr/sbin/convertpkg-compat32
-install -m755 -o root $CWD/massconvert32.sh $PKG/usr/sbin/massconvert32.sh
+install -m755 -o root $CWD/convertpkg-compat64 $PKG/usr/sbin/convertpkg-compat64
+install -m755 -o root $CWD/massconvert64.sh $PKG/usr/sbin/massconvert64.sh
 
 # Add documentation:
 mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION

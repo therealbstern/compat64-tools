@@ -9,14 +9,14 @@
 # published by the Free Software Foundation.
 
 # Modify the compilation/linking environment:
-export PATH="/usr/bin/32:/usr/lib/qt/bin:$PATH"
-export CC="gcc" # This is actually the /usr/bin/32/gcc wrapper
+export PATH="/usr/bin/64:/usr/lib/qt/bin:$PATH"
+export CC="gcc" # This is actually the /usr/bin/64/gcc wrapper
 export CXX="g++"
-export FC="gfortran" # This is actually the /usr/bin/32/gfortran wrapper
+export FC="gfortran" # This is actually the /usr/bin/64/gfortran wrapper
 export F77="gfortran"
 
 # Change the shell prompt to make it clear that we are in 32bit mode:
-PS1='\u@\h (32bit):\w\$ '
+PS1='\u@\h (64bit):\w\$ '
 
 # Check for Qt5, Qt4 and the old 'compatibility install' of Qt3:
 if [ -d /opt/kde3/lib/qt3 ]; then

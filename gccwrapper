@@ -14,11 +14,11 @@ STUBPATH=$(cd $(dirname $0); pwd)
 # Now find the "real" gcc
 REALCC=$(PATH="$(echo $PATH | sed "s#\(.*\):\?$STUBPATH/\?:\?#\1#")" which $(basename $0))
 
-# Filter out -m64 from $@ (this is sometimes added even though we specify -m32)
+# Filter out -m32 from $@ (this is sometimes added even though we specify -m64)
 declare -a Arguments
 for i; do
   case "$i" in 
-    -m64)
+    -m32)
       ;;
     *)
       Arguments[${#Arguments[@]}]="$i"
@@ -26,8 +26,8 @@ for i; do
   esac
 done
 
-# Compiling a 32bit program requires we call gcc with -m32
-$REALCC -m32 "${Arguments[@]}"
+# Compiling a 64-bit program requires we call gcc with -m64
+$REALCC -m64 "${Arguments[@]}"
 
 # Exit with $REALCC's exit code
 exit $?

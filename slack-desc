@@ -6,14 +6,14 @@
 # customary to leave one space after the ':'.
 
               |-----handy-ruler------------------------------------------------------|
-compat32-tools: compat32-tools (32bit compatibility tools for 64bit Slackware)
-compat32-tools:
-compat32-tools: The compat32-tools are a series of scripts that allow
-compat32-tools: the user to add a 32bit compatibility layer (multilib)
-compat32-tools: to 64bit Slackware.
-compat32-tools:
-compat32-tools:
-compat32-tools:
-compat32-tools:
-compat32-tools: Written by Fred Emmott and Eric Hameleers
-compat32-tools:
+compat64-tools: compat64-tools (64-bit compatibility tools for 32-bit Slackware)
+compat64-tools:
+compat64-tools: The compat64-tools are a series of scripts that allow
+compat64-tools: the user to add a 64-bit compatibility layer (multilib)
+compat64-tools: to 32-bit Slackware.
+compat64-tools:
+compat64-tools:
+compat64-tools:
+compat64-tools: Written by Fred Emmott and Eric Hameleers,
+compat64-tools: with minor changes by Ben Stern
+compat64-tools:

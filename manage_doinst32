@@ -18,7 +18,7 @@
 
 # ---------------------------------------------------------------------------
 
-# Extract, test and manage doinst.sh scripts of compat32 packages.
+# Extract, test and manage doinst.sh scripts of compat64 packages.
 
 # Catch errors and display the offending line number:
 set -e
@@ -26,7 +26,7 @@ trap 'echo "$0 FAILED at line ${LINENO}"' ERR
 
 # Package-independent variables
 ARCH=${ARCH:-$(uname -m)}
-TAG=${TAG:-compat32}      # tag to be used for the converted package
+TAG=${TAG:-compat64}      # tag to be used for the converted package
 OUTPUT=${OUTPUT:-/tmp}    # where the package gets created
 TMP=${TMP:-/tmp}          # location for temporary files
 
@@ -34,7 +34,7 @@ TMP=${TMP:-/tmp}          # location for temporary files
 # if an output package name is specified on the command line.
 
 # Blacklist of packages not to use this script on (these *have* to be compiled
-# on a 64bit box):
+# on a 32-bit box):
 BLACKLIST="
 glibc.*
 kernel.*
@@ -48,10 +48,10 @@ function show_help () {
 Usage: $0 <-i input_package_file_name> [-d output_directory]
 
 $(basename $0) is used to extract, test and manage the doinst.sh script
-in  a 32-bit compatibility Slackware package.
+in  a 64-bit compatibility Slackware package.
 
 required parameters::
-  -i input_package_file_name     : 32-bit package to convert
+  -i input_package_file_name     : 64-bit package to convert
 optional parameters::
   -d destination_directory       : write doinst script in this directory
 
@@ -121,9 +121,9 @@ fi
 PKGNAM=$(echo $PKGFILE | rev | cut -f4- -d- | rev)
 VERSION=$(echo $PKGFILE | rev | cut -f3 -d- | rev)
 BUILD=${BUILD:-$(echo $PKGFILE | rev | cut -f1 -d- | cut -f2- -d. | rev)}
-OUTPKG=${OUTPKG:-"${PKGNAM}-compat32-${VERSION}-${ARCH}-${BUILD}${TAG}.${PKGEXT}"}
-# With OUTPKG as commandline param, it may not just be "${PKGNAM}-compat32":
-PKGNAM32=$(echo $OUTPKG | rev | cut -f4- -d- | rev)
+OUTPKG=${OUTPKG:-"${PKGNAM}-compat64-${VERSION}-${ARCH}-${BUILD}${TAG}.${PKGEXT}"}
+# With OUTPKG as commandline param, it may not just be "${PKGNAM}-compat64":
+PKGNAM64=$(echo $OUTPKG | rev | cut -f4- -d- | rev)
 
 for regex in $BLACKLIST; do
   if echo $PKGNAM | grep -Pq "$regex"; then
@@ -134,7 +134,7 @@ done
 
 echo "Extracting doinst.sh from package $PKGNAM (version $VERSION):"
 
-PKG=$TMP/package-$PKGNAM32
+PKG=$TMP/package-$PKGNAM64
 rm -rf $PKG
 mkdir -p $PKG $TMP
 cd $PKG || exit 1
@@ -143,13 +143,13 @@ cd $PKG || exit 1
 # We will need to slightly modify an existing install/doinst.sh
 # It should still create symlinks and run other errands when the resulting
 # package is installed, but should not mess with the files we are going to
-# remove for the -compat32 package.
+# remove for the -compat64 package.
 /sbin/explodepkg $PKGPATH
 
-# Check if the user fed us a 64bit package:
-if [ -d usr/lib64 -o -d lib64 ]; then
-  echo "** This script converts 32bit packages for Slackware64 multilib!"
-  echo "** It looks like you gave me a 64bit package instead."
+# Check if the user fed us a 32-bit package:
+if [ -d usr/lib -o -d lib ]; then
+  echo "** This script converts 64-bit packages for Slackware multilib!"
+  echo "** It looks like you gave me a 32-bit package instead."
   echo "** Are you certain you want to convert the package $(basename $PKGPATH) ?"
   echo "** Press [Ctrl]-[C] now if you want to abort the script."
   read JUNK
@@ -162,7 +162,7 @@ fi
 # No doinst.sh ?
 if [ ! -e install/doinst.sh ]; then
   touch $OUTPUT/$PKGNAM
-  touch $OUTPUT/$PKGNAM32
+  touch $OUTPUT/$PKGNAM64
   exit 0
 else
   cat install/doinst.sh > $OUTPUT/$PKGNAM
@@ -211,16 +211,16 @@ elif [ -f install/doinst.sh ]; then
   else
     echo -n "" > install/doinst.sh.1
   fi
-  # Only keep lines that deal with symlinks in bin/32 and lib directories:
+  # Only keep lines that deal with symlinks in bin/64 and lib directories:
   ( cat install/doinst.sh |grep -v "etc/ld.so.conf" \
       |grep -E '(usr/bin |lib |lib/)' > install/doinst.sh.2
     cat install/doinst.sh.1 install/doinst.sh.2 \
-      |sed -e 's#usr/bin#usr/bin/32#g' > install/doinst.sh
+      |sed -e 's#usr/bin#usr/bin/64#g' > install/doinst.sh
     rm -f install/doinst.sh.1 install/doinst.sh.2 ) || true
 fi
 
 # The cxxlibs need some extra consideration because the libraries in
-# /usr/i486-slackware-linux/lib will not be found by Slackware64.
+# /usr/i486-slackware-linux/lib will not be found by Slackware.
 # Note that as of Slackware 14, "usr/i486-slackware-linux" is gone:
 if [ "$PKGNAM" = "cxxlibs" ]; then
   if [ -e usr/i486-slackware-linux ] ; then
@@ -235,10 +235,10 @@ if [ "$PKGNAM" = "cxxlibs" ]; then
 fi
 
 # The qt package installs several symlinks to /usr/bin which point to
-# binaries in qt's lib directory. We have to strip those from the -compat32
-# package. If you want to build 32bit software that needs these qt binaries,
+# binaries in qt's lib directory. We have to strip those from the -compat64
+# package. If you want to build 64-bit software that needs these qt binaries,
 # you will have to add /usr/lib/qt/bin/ to your $PATH
-# We will remove a lot of stuff which we do not need in the compat32 package
+# We will remove a lot of stuff which we do not need in the compat64 package
 # 
 if [ "$PKGNAM" = "qt" -o "$PKGNAM" = "qt3" ]; then
 
@@ -258,7 +258,7 @@ if [ "$PKGNAM" = "qt" -o "$PKGNAM" = "qt3" ]; then
 fi
 
 # Write the mangled script to $OUTPUT:
-cat install/doinst.sh > $OUTPUT/$PKGNAM32
+cat install/doinst.sh > $OUTPUT/$PKGNAM64
 
 echo "The dsinst.sh script has been extracted and converted."
 

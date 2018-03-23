@@ -8,10 +8,10 @@
 # Distributed under the GNU General Public License, version 2, as
 # published by the Free Software Foundation.
 
-setenv PATH "/usr/bin/32:/usr/lib/qt/bin:$PATH"
-setenv CC "gcc" # This is actually the /usr/bin/32/gcc wrapper
+setenv PATH "/usr/bin/64:/usr/lib/qt/bin:$PATH"
+setenv CC "gcc" # This is actually the /usr/bin/64/gcc wrapper
 setenv CXX "g++"
-setenv FC "gfortran" # This is actually the /usr/bin/32/gfortran wrapper
+setenv FC "gfortran" # This is actually the /usr/bin/64/gfortran wrapper
 setenv F77 "gfortran"
 
 if ($?LD_LIBRARY_PATH == 1) then

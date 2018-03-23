@@ -1,15 +1,15 @@
 #!/bin/bash
-# $Id: massconvert32.sh,v 1.79 2018/01/28 15:57:09 eha Exp eha $
+# $Id: massconvert64.sh,v 1.79 2018/01/28 15:57:09 eha Exp eha $
 #
 # Written 2009, 2010, 2011, 2012, 2013  Eric Hameleers, Eindhoven, NL
 #
-# Convert 32bit slackware packages 'en masse' into compatibility packages
-# to be installed on slackware64 - providing the 32bit part of multilib.
-# The string "-compat32" is added at the end of package name when a
+# Convert 64-bit slackware packages 'en masse' into compatibility packages
+# to be installed on slackware32 - providing the 64-bit part of multilib.
+# The string "-compat64" is added at the end of package name when a
 # compatibility package gets created.  This allows it to be installed
-# on slackware64 alongside the native 64bit versions.
-# For example: the original 32bit package "bzip2" will be converted to a new
-#              package with the name "bzip2-compat32"
+# on slackware32 alongside the native 32-bit versions.
+# For example: the original 64-bit package "bzip2" will be converted to a new
+#              package with the name "bzip2-compat64"
 #
 # You also have to install multilib versions of glibc and gcc !
 
@@ -35,24 +35,24 @@ if [ ! -w "$TMP" ]; then
 fi
 
 # Zero some other variables:
-SLACK32ROOT=""
-SLACK32URL=""
-TARGET64ROOT=""
+SLACK64ROOT=""
+SLACK64URL=""
+TARGET32ROOT=""
 
 # Helpful instructions in case the user asks for it:
 function show_help () {
   # Write the help text to output:
   cat <<EOF
 
-Usage: $0 <-i 32bit_package_tree|-u 32bit_package_url>  [-d output_directory]
+Usage: $0 <-i 64-bit_package_tree|-u 64-bit_package_url>  [-d output_directory]
 
-$(basename $0) converts an essential subset of 32-bit Slackware
-packages into 'compatibility' packages for 64-bit Slackware.
+$(basename $0) converts an essential subset of 64-bit Slackware
+packages into 'compatibility' packages for 32-bit Slackware.
 
 Required parameter - one of these two::
-  -i 32bit_package_tree        A 32bit Slackware package-tree. It should have
+  -i 64-bit_package_tree        A 64-bit Slackware package-tree. It should have
                                the a,ap,d,..,y directories immediately below.
-  -u 32bit_package_url         The URL of a http or ftp server containing 32bit
+  -u 64-bit_package_url         The URL of a http or ftp server containing 64-bit
                                Slackware packages. It should have the
                                a,ap,d,..,y directories immediately below.
 Optional parameter::
@@ -74,7 +74,7 @@ EOF
 while [ ! -z "$1" ]; do
   case $1 in
     -d|--destdir)
-      TARGET64ROOT="$(cd $(dirname "${2}"); pwd)/$(basename "${2}")"
+      TARGET32ROOT="$(cd $(dirname "${2}"); pwd)/$(basename "${2}")"
       shift 2
       ;;
     -h|--help)
@@ -82,7 +82,7 @@ while [ ! -z "$1" ]; do
       exit 0
       ;;
     -i|--inputdir)
-      SLACK32ROOT="$(cd $(dirname "${2}"); pwd)/$(basename "${2}")"
+      SLACK64ROOT="$(cd $(dirname "${2}"); pwd)/$(basename "${2}")"
       shift 2
       ;;
     -n|--dry-run)
@@ -94,7 +94,7 @@ while [ ! -z "$1" ]; do
       shift
       ;;
     -u|--inputurl)
-      SLACK32URL="${2}"
+      SLACK64URL="${2}"
       shift 2
       ;;
     -*)
@@ -157,10 +157,10 @@ function conv_pkg () {
 
   # First find out if the requested package exists in the repository:
   # Two repo location options: URL or local directory.
-  if [ -n "$SLACK32URL" ]; then
-    FULLURL=$(get_url_pkg $PKGPATH $SLACK32URL)
+  if [ -n "$SLACK64URL" ]; then
+    FULLURL=$(get_url_pkg $PKGPATH $SLACK64URL)
     if [ -n "$FULLURL" ]; then
-      FULLPKG=$SLACK32ROOT/$SERIES/$(basename $FULLURL)
+      FULLPKG=$SLACK64ROOT/$SERIES/$(basename $FULLURL)
       REPOVERSION=$(basename $FULLURL |rev |cut -d- -f3 |rev)
       REPOBLD="$(basename $FULLURL |rev |cut -d- -f1 |cut -d. -f2- |rev)"
     else
@@ -170,7 +170,7 @@ function conv_pkg () {
       REPOBLD=""
     fi
   else
-    FULLPKG=$(get_pkgfullpath $SLACK32ROOT/$PKGPATH)
+    FULLPKG=$(get_pkgfullpath $SLACK64ROOT/$PKGPATH)
     if [ -n "$FULLPKG" ]; then
       REPOVERSION="$(basename $FULLPKG |rev |cut -d- -f3 |rev)"
       REPOBLD="$(basename $FULLPKG |rev |cut -d- -f1 |cut -d. -f2- |rev)"
@@ -188,10 +188,10 @@ function conv_pkg () {
     if [ $? -eq 0 ]; then
       [ $VERBOSE -eq 1 ] && echo "--- Using Slackware's patch package for $BP"
       PKGPATH="../patches/packages/$BP"
-      if [ -n "$SLACK32URL" ]; then
-        FULLURL=$(get_url_pkg $PKGPATH "$(dirname $SLACK32URL)/patches")
+      if [ -n "$SLACK64URL" ]; then
+        FULLURL=$(get_url_pkg $PKGPATH "$(dirname $SLACK64URL)/patches")
         if [ -n "$FULLURL" ]; then
-          FULLPKG=$SLACK32ROOT/$SERIES/$(basename $FULLURL)
+          FULLPKG=$SLACK64ROOT/$SERIES/$(basename $FULLURL)
           REPOVERSION=$(basename $FULLURL |rev |cut -d- -f3 |rev)
           REPOBLD="$(basename $FULLURL |rev |cut -d- -f1 |cut -d. -f2- |rev)"
         else
@@ -200,7 +200,7 @@ function conv_pkg () {
           REPOBLD=""
         fi
       else
-        FULLPKG=$(get_pkgfullpath $SLACK32ROOT/$PKGPATH)
+        FULLPKG=$(get_pkgfullpath $SLACK64ROOT/$PKGPATH)
         if [ -n "$FULLPKG" ]; then
           REPOVERSION="$(basename $FULLPKG |rev |cut -d- -f3 |rev)"
           REPOBLD="$(basename $FULLPKG |rev |cut -d- -f1 |cut -d. -f2- |rev)"
@@ -224,21 +224,21 @@ function conv_pkg () {
   # Package (or patch) available - let's start!
 
   # Do we have a local converted package already?
-  HAVE_COMPAT32="$(get_pkgfullpath $TARGET64ROOT/${SERIES}-compat32/$BP-compat32)"
-  if [ -n "$HAVE_COMPAT32" ]; then
-    COMPAT32VERSION="$(echo "$HAVE_COMPAT32" |rev|cut -d- -f3|rev)"
-    COMPAT32BLD="$(echo "$HAVE_COMPAT32" |rev|cut -d- -f1|cut -d. -f2-|rev)"
-    if [ "$COMPAT32VERSION" = "$REPOVERSION" -a "${COMPAT32BLD%compat32}" = "$REPOBLD" ]
+  HAVE_COMPAT64="$(get_pkgfullpath $TARGET32ROOT/${SERIES}-compat64/$BP-compat64)"
+  if [ -n "$HAVE_COMPAT64" ]; then
+    COMPAT64VERSION="$(echo "$HAVE_COMPAT64" |rev|cut -d- -f3|rev)"
+    COMPAT64BLD="$(echo "$HAVE_COMPAT64" |rev|cut -d- -f1|cut -d. -f2-|rev)"
+    if [ "$COMPAT64VERSION" = "$REPOVERSION" -a "${COMPAT64BLD%compat64}" = "$REPOBLD" ]
     then
-      [ $VERBOSE -eq 1 ] && echo "--- ${BP}-compat32 version '$COMPAT32VERSION' already available"
+      [ $VERBOSE -eq 1 ] && echo "--- ${BP}-compat64 version '$COMPAT64VERSION' already available"
     else
       if [ $DRYRUN -eq 0 ]; then
-        echo ">>> Deleting old version '$COMPAT32VERSION' of '${BP}-compat32'"
+        echo ">>> Deleting old version '$COMPAT64VERSION' of '${BP}-compat64'"
       else
         echo "${BP}: existing package needs update"
       fi
-      FILE_TO_REMOVE=$HAVE_COMPAT32
-      HAVE_COMPAT32=""
+      FILE_TO_REMOVE=$HAVE_COMPAT64
+      HAVE_COMPAT64=""
     fi
   else
     if [ $DRYRUN -eq 1 ]; then
@@ -246,23 +246,23 @@ function conv_pkg () {
     fi
   fi
 
-  # If we do not have the latest -compat32 package, then run the conversion:
-  if [ ! -n "$HAVE_COMPAT32" -a $DRYRUN -eq 0 ]; then
+  # If we do not have the latest -compat64 package, then run the conversion:
+  if [ ! -n "$HAVE_COMPAT64" -a $DRYRUN -eq 0 ]; then
 
-    if [ -n "$SLACK32URL" ]; then
+    if [ -n "$SLACK64URL" ]; then
       # Download the Slackware package before converting it:
-      ( mkdir -p $SLACK32ROOT/$SERIES
-        cd $SLACK32ROOT/$SERIES
+      ( mkdir -p $SLACK64ROOT/$SERIES
+        cd $SLACK64ROOT/$SERIES
         lftp -c "open $(dirname $FULLURL) ; get $(basename $FULLURL)" 2>/dev/null
       )
     fi
 
     [ $VERBOSE -eq 1 ] && echo "--- $BP"
-    # Convert the Slackware package into a -compat32 version:
-    sh $CONV32 -i $FULLPKG -d $TARGET64ROOT/${SERIES}-compat32
+    # Convert the Slackware package into a -compat64 version:
+    sh $CONV64 -i $FULLPKG -d $TARGET32ROOT/${SERIES}-compat64
 
     if [ -n "$FILE_TO_REMOVE" ]; then
-      # This is where we delete an older version of the -compat32 package:
+      # This is where we delete an older version of the -compat64 package:
       rm $(echo $FILE_TO_REMOVE | rev | cut -d. -f2- | rev).*
       FILE_TO_REMOVE=""
     fi
@@ -270,13 +270,13 @@ function conv_pkg () {
 }
 
 # Safety checks in case a URL was provided: 
-if [ -n "$SLACK32URL" ]; then
-  if [ -n "$SLACK32ROOT" ]; then
+if [ -n "$SLACK64URL" ]; then
+  if [ -n "$SLACK64ROOT" ]; then
     echo "*** Options '-i' and '-u' can not be used together!"
     exit 1
   else
     # Define a 'temporary' root directory where we will download packages:
-    SLACK32ROOT="${TMP}/alienBOB/slackware"
+    SLACK64ROOT="${TMP}/alienBOB/slackware"
     if ! which lftp 1>/dev/null 2>&1 ; then
       echo  "No lftp binary detected! Need lftp for package downloading!"
       exit 1
@@ -284,23 +284,23 @@ if [ -n "$SLACK32URL" ]; then
   fi
 fi
 
-# The root directory of 32bit Slackware packages
+# The root directory of 64-bit Slackware packages
 # (should have the a,ap,d,..,y directories immediately below):
 # Let's use a fallback directory in case none was specified:
-SLACK32ROOT="${SLACK32ROOT:-"/home/ftp/pub/Linux/Slackware/slackware-current/slackware"}"
+SLACK64ROOT="${SLACK64ROOT:-"/home/ftp/pub/Linux/Slackware/slackware-current/slackware"}"
 
 # The output directory for our converted packages; defaults to the current dir.
-# Note that {a,ap,d,l,n,x}-compat32 directories will be created below this
+# Note that {a,ap,d,l,n,x}-compat64 directories will be created below this
 # directory if they do not yet exist:
-TARGET64ROOT="${TARGET64ROOT:-"$(pwd)"}"
+TARGET32ROOT="${TARGET32ROOT:-"$(pwd)"}"
 
 # Abort if we got directories with spaces in them:
-if contains_spaces "$SLACK32ROOT" ; then
-  echo "Directories with spaces are unsupported: '$SLACK32ROOT'!"
+if contains_spaces "$SLACK64ROOT" ; then
+  echo "Directories with spaces are unsupported: '$SLACK64ROOT'!"
   exit 1
 fi
-if contains_spaces "$TARGET64ROOT" ; then
-  echo "Directories with spaces are unsupported: '$TARGET64ROOT'!"
+if contains_spaces "$TARGET32ROOT" ; then
+  echo "Directories with spaces are unsupported: '$TARGET32ROOT'!"
   exit 1
 fi
 
@@ -308,44 +308,44 @@ fi
 SRCDIR=$(cd $(dirname $(which $0)); pwd)
 
 # The script that does the package conversion:
-CONV32=$SRCDIR/convertpkg-compat32
+CONV64=$SRCDIR/convertpkg-compat64
 
 # Bail out if the conversion script is not available/working:
-if [ ! -f $CONV32 ]; then
-  echo "Required script '$CONV32' is not present or not executable! Aborting..."
+if [ ! -f $CONV64 ]; then
+  echo "Required script '$CONV64' is not present or not executable! Aborting..."
   exit 1
 fi
 
 # We can not proceed if there are no packages and we did not get an URL:
-if [ -z "$SLACK32URL" ]; then
-  if [ ! -d $SLACK32ROOT/a -o ! -d $SLACK32ROOT/ap -o ! -d $SLACK32ROOT/d -o ! -d $SLACK32ROOT/l -o ! -d $SLACK32ROOT/n -o ! -d $SLACK32ROOT/x -o ! -d $SLACK32ROOT/xap ]; then
-    echo "Required package directories a,ap,d,l,n,x,xap below '$SLACK32ROOT' are not found! Aborting..."
+if [ -z "$SLACK64URL" ]; then
+  if [ ! -d $SLACK64ROOT/a -o ! -d $SLACK64ROOT/ap -o ! -d $SLACK64ROOT/d -o ! -d $SLACK64ROOT/l -o ! -d $SLACK64ROOT/n -o ! -d $SLACK64ROOT/x -o ! -d $SLACK64ROOT/xap ]; then
+    echo "Required package directories a,ap,d,l,n,x,xap below '$SLACK64ROOT' are not found! Aborting..."
     exit 1
   fi
 fi
 
 # If a destination_directory was specified, abort now if we can not create it:
-if [ -n "$TARGET64ROOT" -a ! -d "$TARGET64ROOT" ]; then
-  echo "Creating output directory '$TARGET64ROOT'..."
-  mkdir -p $TARGET64ROOT
-  if [ ! -w "$TARGET64ROOT" ]; then
-    echo "Creation of output directory '$TARGET64ROOT' failed!"
+if [ -n "$TARGET32ROOT" -a ! -d "$TARGET32ROOT" ]; then
+  echo "Creating output directory '$TARGET32ROOT'..."
+  mkdir -p $TARGET32ROOT
+  if [ ! -w "$TARGET32ROOT" ]; then
+    echo "Creation of output directory '$TARGET32ROOT' failed!"
     exit 3
   fi
 fi
 
 # Get a list of available patches
-if [ -n "$SLACK32URL" ]; then
-  PATCH_LIST=$(echo $(lftp -c "open $(dirname $SLACK32URL)/patches/packages/ ; cls *.t?z" 2>/dev/null | rev | cut -f4- -d- |rev))
+if [ -n "$SLACK64URL" ]; then
+  PATCH_LIST=$(echo $(lftp -c "open $(dirname $SLACK64URL)/patches/packages/ ; cls *.t?z" 2>/dev/null | rev | cut -f4- -d- |rev))
 else
-  PATCH_LIST=$(echo $(cd $(dirname $SLACK32ROOT)/patches/packages/ 2>/dev/null ; ls -1 *.t?z 2>/dev/null | rev | cut -f4- -d- |rev))
+  PATCH_LIST=$(echo $(cd $(dirname $SLACK64ROOT)/patches/packages/ 2>/dev/null ; ls -1 *.t?z 2>/dev/null | rev | cut -f4- -d- |rev))
 fi
 
 # This is the script's internal list of what I consider as the essential
-# 32bit multilib package set for your Slackware64:
+# 64-bit multilib package set for your Slackware32:
 
 # The A/ series:
-A_COMPAT32="
+A_COMPAT64="
 aaa_elflibs
 attr
 bzip2
@@ -364,7 +364,7 @@ xz
 "
 
 # The AP/ series:
-AP_COMPAT32="
+AP_COMPAT64="
 cups
 cups-filters
 flac
@@ -375,14 +375,14 @@ sqlite
 "
 
 # The D/ series:
-D_COMPAT32="
+D_COMPAT64="
 libtool
 llvm
 opencl-headers
 "
 
 # The L/ series:
-L_COMPAT32="
+L_COMPAT64="
 Mako
 SDL2
 alsa-lib
@@ -482,7 +482,7 @@ zlib
 "
 
 # The N/ series:
-N_COMPAT32="
+N_COMPAT64="
 curl
 cyrus-sasl
 gnutls
@@ -497,7 +497,7 @@ samba
 "
 
 # The X/ series:
-X_COMPAT32="
+X_COMPAT64="
 fontconfig
 freeglut
 glew
@@ -557,61 +557,61 @@ xcb-util
 "
 
 # The XAP/ series:
-XAP_COMPAT32="
+XAP_COMPAT64="
 sane
 "
 
 # Create target directories if they do not exist:
-for TDIR in a-compat32 ap-compat32 d-compat32 l-compat32 n-compat32 x-compat32 xap-compat32 ; do
-  mkdir -p $TARGET64ROOT/$TDIR
-  if [ ! -w $TARGET64ROOT/$TDIR ]; then
-    echo "Directory '$TARGET64ROOT/$TDIR' is not writable! Aborting..."
+for TDIR in a-compat64 ap-compat64 d-compat64 l-compat64 n-compat64 x-compat64 xap-compat64 ; do
+  mkdir -p $TARGET32ROOT/$TDIR
+  if [ ! -w $TARGET32ROOT/$TDIR ]; then
+    echo "Directory '$TARGET32ROOT/$TDIR' is not writable! Aborting..."
     exit 1
   fi
 done
 
-# Convert the 32bit packages from A AP D L N and X series, checking for patches:
+# Convert the 64-bit packages from A AP D L N and X series, checking for patches:
 [ $VERBOSE -eq 1 ] && echo "*** Starting the conversion process:"
 
 [ $VERBOSE -eq 1 ] && echo "*** 'A' series:"
-for INPKG in $A_COMPAT32 ; do
+for INPKG in $A_COMPAT64 ; do
   conv_pkg $INPKG a "$PATCH_LIST"
 done
 
 [ $VERBOSE -eq 1 ] && echo "*** 'AP' series:"
-for INPKG in $AP_COMPAT32 ; do
+for INPKG in $AP_COMPAT64 ; do
   conv_pkg $INPKG ap "$PATCH_LIST"
 done
 
 [ $VERBOSE -eq 1 ] && echo "*** 'D' series:"
-for INPKG in $D_COMPAT32 ; do
+for INPKG in $D_COMPAT64 ; do
   conv_pkg $INPKG d "$PATCH_LIST"
 done
 
 [ $VERBOSE -eq 1 ] && echo "*** 'L' series:"
-for INPKG in $L_COMPAT32 ; do
+for INPKG in $L_COMPAT64 ; do
   conv_pkg $INPKG l "$PATCH_LIST"
 done
 
 [ $VERBOSE -eq 1 ] && echo "*** 'N' series:"
-for INPKG in $N_COMPAT32 ; do
+for INPKG in $N_COMPAT64 ; do
   conv_pkg $INPKG n "$PATCH_LIST"
 done
 
 [ $VERBOSE -eq 1 ] && echo "*** 'X' series:"
-for INPKG in $X_COMPAT32 ; do
+for INPKG in $X_COMPAT64 ; do
   conv_pkg $INPKG x "$PATCH_LIST"
 done
 
 [ $VERBOSE -eq 1 ] && echo "*** 'XAP' series:"
-for INPKG in $XAP_COMPAT32 ; do
+for INPKG in $XAP_COMPAT64 ; do
   conv_pkg $INPKG xap "$PATCH_LIST"
 done
 
 # Mention downloaded packages if we used a URL as source:
-if [ $VERBOSE -eq 1 -a $DRYRUN -eq 0 -a  -n "$SLACK32URL" ]; then
-  echo "WARNING: packages which were downloaded from '$SLACK32URL'"
-  echo "have been left in directory '$SLACK32ROOT'."
+if [ $VERBOSE -eq 1 -a $DRYRUN -eq 0 -a  -n "$SLACK64URL" ]; then
+  echo "WARNING: packages which were downloaded from '$SLACK64URL'"
+  echo "have been left in directory '$SLACK64ROOT'."
   echo "It is safe to remove these now."
   echo ""
 fi

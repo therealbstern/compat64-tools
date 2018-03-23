@@ -11,11 +11,11 @@ STUBPATH=$(cd $(dirname $0); pwd)
 # Now find the "real" gfortran
 REALFC=$(PATH="$(echo $PATH | sed "s#\(.*\):\?$STUBPATH/\?:\?#\1#")" which $(basename $0))
 
-# Filter out -m64 from $@ (this is sometimes added even though we specify -m32)
+# Filter out -m32 from $@ (this is sometimes added even though we specify -m64)
 declare -a Arguments
 for i; do
   case "$i" in 
-    -m64)
+    -m32)
       ;;
     *)
       Arguments[${#Arguments[@]}]="$i"
@@ -23,8 +23,8 @@ for i; do
   esac
 done
 
-# Compiling a 32bit program requires we call gfortran with -m32
-$REALFC -m32 "${Arguments[@]}"
+# Compiling a 64-bit program requires we call gfortran with -m64
+$REALFC -m64 "${Arguments[@]}"
 
 # Exit with $REALFC's exit code
 exit $?

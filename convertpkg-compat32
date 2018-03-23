@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: convertpkg-compat32,v 1.29 2017/06/08 08:52:41 eha Exp eha $
+# $Id: convertpkg-compat64,v 1.29 2017/06/08 08:52:41 eha Exp eha $
 
 # Copyright (c) 2009  Frederick Emmott <fred@slackware.com>
 # Copyright (c) 2009, 2010, 2011, 2012, 2013  Eric Hameleers, Eindhoven, NL
@@ -21,8 +21,8 @@
 
 # ---------------------------------------------------------------------------
 
-# Convert a 32-bit Slackware package (s390 or x86)
-# to a compatibility package for a 64bit multilib Slackware.
+# Convert a 64-bit Slackware package (s390 or x86)
+# to a compatibility package for a 32-bit multilib Slackware.
 
 # Catch errors and display the offending line number:
 set -e
@@ -30,7 +30,7 @@ trap 'echo "$0 FAILED at line ${LINENO}"' ERR
 
 # Package-independent variables
 ARCH=${ARCH:-$(uname -m)}
-TAG=${TAG:-compat32}      # tag to be used for the converted package
+TAG=${TAG:-compat64}      # tag to be used for the converted package
 OUTPUT=${OUTPUT:-/tmp}    # where the package gets created
 TMP=${TMP:-/tmp}          # location for temporary files
 
@@ -38,7 +38,7 @@ TMP=${TMP:-/tmp}          # location for temporary files
 # if an output package name is specified on the command line.
 
 # Blacklist of packages not to use this script on (these *have* to be compiled
-# on a 64bit box):
+# on a 32-bit box):
 BLACKLIST="
 glibc.*
 kernel.*
@@ -51,11 +51,11 @@ function show_help () {
 
 Usage: $0 <-i input_package_file_name> [-o output_package_file_name] [-d output_directory] [-s custom_slack_desc] [-e custom_package_extension]
 
-$(basename $0) is used to convert a 32-bit Slackware package
-into a '32-bit compatibility' package, for installion on 64-bit Slackware.
+$(basename $0) is used to convert a 64-bit Slackware package
+into a '64-bit compatibility' package, for installion on 32-bit Slackware.
 
 required parameters::
-  -i input_package_file_name     : 32-bit package to convert
+  -i input_package_file_name     : 64-bit package to convert
 optional parameters::
   -d destination_directory       : create package in this directory
   -e extension                   : use another valid extension instead of 'txz'
@@ -145,9 +145,9 @@ fi
 PKGNAM=$(echo $PKGFILE | rev | cut -f4- -d- | rev)
 VERSION=$(echo $PKGFILE | rev | cut -f3 -d- | rev)
 BUILD=${BUILD:-$(echo $PKGFILE | rev | cut -f1 -d- | cut -f2- -d. | rev)}
-OUTPKG=${OUTPKG:-"${PKGNAM}-compat32-${VERSION}-${ARCH}-${BUILD}${TAG}.${PKGEXT}"}
-# With OUTPKG as commandline param, it may not just be "${PKGNAM}-compat32":
-PKGNAM32=$(echo $OUTPKG | rev | cut -f4- -d- | rev)
+OUTPKG=${OUTPKG:-"${PKGNAM}-compat64-${VERSION}-${ARCH}-${BUILD}${TAG}.${PKGEXT}"}
+# With OUTPKG as commandline param, it may not just be "${PKGNAM}-compat64":
+PKGNAM64=$(echo $OUTPKG | rev | cut -f4- -d- | rev)
 
 for regex in $BLACKLIST; do
   if echo $PKGNAM | grep -Pq "$regex"; then
@@ -156,9 +156,9 @@ for regex in $BLACKLIST; do
   fi
 done
 
-echo "Converting package $PKGNAM (version $VERSION) to $OUTPKG ($PKGNAM32)"
+echo "Converting package $PKGNAM (version $VERSION) to $OUTPKG ($PKGNAM64)"
 
-PKG=$TMP/package-$PKGNAM32
+PKG=$TMP/package-$PKGNAM64
 rm -rf $PKG
 mkdir -p $PKG $TMP
 cd $PKG || exit 1
@@ -167,13 +167,13 @@ cd $PKG || exit 1
 # We will need to slightly modify an existing install/doinst.sh
 # It should still create symlinks and run other errands when the resulting
 # package is installed, but should not mess with the files we are going to
-# remove for the -compat32 package.
+# remove for the -compat64 package.
 /sbin/explodepkg $PKGPATH
 
-# Check if the user fed us a 64bit package:
-if [ -d usr/lib64 -o -d lib64 ]; then
-  echo "** This script converts 32bit packages for Slackware64 multilib!"
-  echo "** It looks like you gave me a 64bit package instead."
+# Check if the user fed us a 32-bit package:
+if [ -d usr/lib32 -o -d lib32 ]; then
+  echo "** This script converts 64-bit packages for Slackware32 multilib!"
+  echo "** It looks like you gave me a 32-bit package instead."
   echo "** Are you certain you want to convert the package $(basename $PKGPATH) ?"
   echo "** Press [Ctrl]-[C] now if you want to abort the script."
   read JUNK
@@ -183,7 +183,7 @@ fi
 # Take special care of gtk+2, gdk-pixbuf2, pango and udev when stripping things!
 #
 
-# Remove stuff we only want from the 64-bit package:
+# Remove stuff we only want from the 32-bit package:
 if [ "$PKGNAM" = "gtk+2" -o "$PKGNAM" = "gtk+3" -o "$PKGNAM" = "gdk-pixbuf2" -o "$PKGNAM" = "pango" ];
 then
   rm -rf bin sbin usr/{include,sbin,share,info,man,libexec}
@@ -191,25 +191,25 @@ else
   rm -rf etc bin sbin usr/{include,sbin,share,info,man,libexec}
 fi
 
-# Take care of 32bit binaries:
+# Take care of 64-bit binaries:
 if [ "$PKGNAM" = "gtk+2" -o "$PKGNAM" = "gtk+3" -o "$PKGNAM" = "gdk-pixbuf2" -o "$PKGNAM" = "pango" ];
 then
-  find usr/bin -type f ! -name "*-32" -exec mv {} {}-32 \;
+  find usr/bin -type f ! -name "*-64" -exec mv {} {}-64 \;
 elif [ "$PKGNAM" = "llvm" ]; then
-  mkdir -p usr/bin/32
+  mkdir -p usr/bin/64
   for BIN in usr/bin/* ; do
-    ln -s ../$(basename $BIN)-32 usr/bin/32/$(basename $BIN)
+    ln -s ../$(basename $BIN)-64 usr/bin/64/$(basename $BIN)
   done
-  find usr/bin -maxdepth 1 -type f ! -name "*-32" -exec mv {} {}-32 \;
+  find usr/bin -maxdepth 1 -type f ! -name "*-64" -exec mv {} {}-64 \;
 elif [ -d usr/bin ]; then
-  mkdir ./32
-  find usr/bin -type f -exec mv {} ./32 \;
+  mkdir ./64
+  find usr/bin -type f -exec mv {} ./64 \;
   rm -rf usr/bin/*
-  mv ./32 usr/bin/
+  mv ./64 usr/bin/
 fi
 
 if [ "$PKGNAM" = "udev" -o "$PKGNAM" = "eudev" ]; then
-  # These are part of the 64-bit package:
+  # These are part of the 32-bit package:
   rm -rf lib/firmware
   rm -rf lib/modprobe.d
   rm -rf lib/udev
@@ -271,21 +271,21 @@ elif [ -f install/doinst.sh ]; then
   else
     echo -n "" > install/doinst.sh.1
   fi
-  # Only keep lines that deal with symlinks in bin/32 and lib directories,
+  # Only keep lines that deal with symlinks in bin/64 and lib directories,
   # and the config/preserve_perms commands that apply outside of /etc/:
   ( cat install/doinst.sh \
       |grep -v "etc/ld.so.conf" |grep -v "../sbin/" \
       |grep -Ev '(config etc|preserve_perms etc)' \
       |grep -E '(usr/bin |lib |lib/|^config |^preserve_perms )' > install/doinst.sh.2
     cat install/doinst.sh.1 install/doinst.sh.2 \
-      |sed -e 's# usr/bin# usr/bin/32#g' \
-      |sed -e 's#32 ; ln -sf ../#&../#' > install/doinst.sh
+      |sed -e 's# usr/bin# usr/bin/64#g' \
+      |sed -e 's#64 ; ln -sf ../#&../#' > install/doinst.sh
     rm -f install/doinst.sh.1 install/doinst.sh.2 ) || true
 fi
 
 # Post-cleanup-cleanup to catch sscript errors:
 if [ "$PKGNAM" = "samba" ]; then
-  # Get rid of a useless (because taken care of in 64bit package) block:
+  # Get rid of a useless (because taken care of in 32-bit package) block:
   cat install/doinst.sh \
     | grep -v 'samba/private' \
      > install/doinst.sh.2
@@ -294,7 +294,7 @@ if [ "$PKGNAM" = "samba" ]; then
 fi
 
 # The cxxlibs need some extra consideration because the libraries in
-# /usr/i486-slackware-linux/lib will not be found by Slackware64.
+# /usr/i486-slackware-linux/lib will not be found by Slackware32.
 # Note that as of Slackware 14, "usr/i486-slackware-linux" is gone:
 if [ "$PKGNAM" = "cxxlibs" ]; then
   if [ -e usr/i486-slackware-linux ] ; then
@@ -309,10 +309,10 @@ if [ "$PKGNAM" = "cxxlibs" ]; then
 fi
 
 # The qt package installs several symlinks to /usr/bin which point to
-# binaries in qt's lib directory. We have to strip those from the -compat32
-# package. If you want to build 32bit software that needs these qt binaries,
+# binaries in qt's lib directory. We have to strip those from the -compat64
+# package. If you want to build 64-bit software that needs these qt binaries,
 # you will have to add /usr/lib/qt/bin/ to your $PATH
-# We will remove a lot of stuff which we do not need in the compat32 package
+# We will remove a lot of stuff which we do not need in the compat64 package
 # 
 if [ "$PKGNAM" = "qt" -o "$PKGNAM" = "qt3" -o "$PKGNAM" = "qt5" ]; then
 
@@ -376,18 +376,18 @@ EOT
   # Now, re-work the slack-desc:
 
   # Fix the handy ruler:
-  SPCS=""; while [ ${#SPCS} -lt ${#PKGNAM32} ]; do SPCS=" $SPCS";done
+  SPCS=""; while [ ${#SPCS} -lt ${#PKGNAM64} ]; do SPCS=" $SPCS";done
   sed -i -r "s/^ *\|-/${SPCS}\|-/" install/slack-desc
 
-  # Every line; foo: -> foo-compat32:
-  sed -i "s,$PKGNAM:,$PKGNAM32:," install/slack-desc
+  # Every line; foo: -> foo-compat64:
+  sed -i "s,$PKGNAM:,$PKGNAM64:," install/slack-desc
 
-  # First line: foo-compat32: foo (description of foo)
-  #   -> foo-compat32: foo-compat32 (description of foo)
-  sed -i "s,$PKGNAM32: $PKGNAM ,$PKGNAM32: $PKGNAM32 ," install/slack-desc
+  # First line: foo-compat64: foo (description of foo)
+  #   -> foo-compat64: foo-compat64 (description of foo)
+  sed -i "s,$PKGNAM64: $PKGNAM ,$PKGNAM64: $PKGNAM64 ," install/slack-desc
 
-  # Last line: if empty, add 32-bit message
-  sed -i "\$s,^${PKGNAM32}: *$,${PKGNAM32}: This package contains 32-bit compatibility binaries.," install/slack-desc
+  # Last line: if empty, add 64-bit message
+  sed -i "\$s,^${PKGNAM64}: *$,${PKGNAM64}: This package contains 64-bit compatibility binaries.," install/slack-desc
 fi
 
 # If we ended up with an empty doinst.sh we should remove it now:
