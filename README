@@ -1,0 +1,67 @@
+Using 32-bit Binaries on Slackware64
+------------------------------------
+
+In order to use and compile 32bit software on Slackware64, you will have
+to replace your gcc and glibc packages with multilib versions, or else
+install 'compat32' packages for gcc and glibc that add the 32bit binaries
+for these packages. You can not just take the binaries from a 32bit Slackware.
+Instead, the 'compat32' versions of the gcc and glibc packages will have to be
+compiled on the 64bit system.
+
+You will also need to install several supporting 32bit libraries.  These
+libraries can be taken from the 32bit Slackware of the same version as
+your Slackware64.  To make things easier for you, this package contains two
+scripts:
+
+  convertpkg-compat32
+  massconvert32.sh
+
+The first script converts a single 32bit Slackware package into a 'compat32'
+package that can be installed on 64bit Slackware.  The second script will do
+the hard work for you: it contains an internal list of Slackware packages
+that you will need for a functional multilib Slackware64.  The script will
+convert these packages to 'compat32' packages.  All that the script needs is
+a single commandline argument: the path to a local 32bit Slackware package
+tree (this is the directory below which you find 'a', 'ap', ... 'y'
+subdirectories).
+
+
+Building 32-bit binaries on Slackware64
+---------------------------------------
+
+In order to compile 32bit software when the full set of multilib binaries is
+installed, all that you need is adding "-m32" to the compiler flags.
+Quite a few build systems however insist on adding -m64, regardless of what
+you tell it.  For this reason, the package installs a few scripts to enforce
+32-bit builds. To load them into your path (including wrappers around gcc)
+you only need to run the following command in your bash shell:
+
+. /etc/profile.d/32dev.sh
+
+Note the single dot followed by a space: this is the 'source' command which
+will set the various variables in your current shell environment.
+Do not forget to exit from your shell (and login again) after you have
+finished compiling your 32bit software, to get rid of the 32bit-enforcing
+environmental variables!
+
+Additionally, if you compile any 32bit binaries conflict with 64-bit versions,
+they should be installed into bin/32/, not bin/.
+
+A typical invocation of the 'configure' command as an example:
+
+. /etc/profile.d/32dev.sh
+./configure \
+  --prefix=/usr \
+  --bindir=/usr/bin/32
+
+
+Keeping your multilib environment up to date
+--------------------------------------------
+
+The third-party program 'compat32pkg' is able to keep your multilib packages
+up to date. It works somewhat like what slackpkg does for regular Slackware.
+See http://compat32pkg.sourceforge.net/
+
+===============================================================================
+Eric Hameleers <alien@slackware.com> 15-nov-2010
+

@@ -1,0 +1,30 @@
+#!/bin/bash
+# $Id: gfortranwrapper,v 1.1 2014/01/16 09:32:24 eha Exp eha $
+# Copyright 2014  Eric Hameleers, Eindhoven, NL
+
+# Distributed under the GNU General Public License, version 2, as
+# published by the Free Software Foundation.
+
+# Find the stub gfortran's directory:
+STUBPATH=$(cd $(dirname $0); pwd)
+
+# Now find the "real" gfortran
+REALFC=$(PATH="$(echo $PATH | sed "s#\(.*\):\?$STUBPATH/\?:\?#\1#")" which $(basename $0))
+
+# Filter out -m64 from $@ (this is sometimes added even though we specify -m32)
+declare -a Arguments
+for i; do
+  case "$i" in 
+    -m64)
+      ;;
+    *)
+      Arguments[${#Arguments[@]}]="$i"
+      ;;
+  esac
+done
+
+# Compiling a 32bit program requires we call gfortran with -m32
+$REALFC -m32 "${Arguments[@]}"
+
+# Exit with $REALFC's exit code
+exit $?

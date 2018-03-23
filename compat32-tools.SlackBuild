@@ -1,0 +1,88 @@
+#!/bin/sh
+
+# Copyright (c) 2009  Frederick Emmott <fred@slackware.com>
+# Copyright (c) 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018  Eric Hameleers, Eindhoven, NL
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+PRGNAM=compat32-tools
+VERSION=3.7
+ARCH=noarch
+TAG=${TAG:-alien}
+BUILD=${BUILD:-17}
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp}
+PKG=$TMP/package-$PRGNAM
+rm -rf $PKG
+mkdir -p $TMP $PKG
+
+# Add the scripts that change your environment for 32bit compilation
+# (but do not make it executable by default):
+mkdir -p $PKG/etc/profile.d
+install -o root -m644 $CWD/32dev.sh $PKG/etc/profile.d/32dev.sh
+install -o root -m644 $CWD/32dev.csh $PKG/etc/profile.d/32dev.csh
+
+# Add the 'gcc' wrapper script to be used for building 32bit software:
+mkdir -p $PKG/usr/bin/32
+install -o root -m755 $CWD/gccwrapper $PKG/usr/bin/32/gcc
+
+# Add the 'gfortran' wrapper script to be used for building 32bit software:
+mkdir -p $PKG/usr/bin/32
+install -o root -m755 $CWD/gfortranwrapper $PKG/usr/bin/32/gfortran
+
+# Add symlinks for cc and g++ stubs:
+( cd $PKG/usr/bin/32;
+  ln -s gcc g++;
+  ln -s gcc cc;
+)
+
+# Add symlinks for fortran stubs:
+( cd $PKG/usr/bin/32;
+  ln -s gfortran f77;
+  ln -s gfortran f95;
+  ln -s gfortran g77;
+  ln -s gfortran g95;
+  ln -s gfortran fortran;
+)
+
+# Add the two scripts that will facilitate converting 32bit Slackware
+# packages to a format that is suitable to be installed on 64bit Slackware.
+# Since these scripts should be run as root, dump them into a sbin directory:
+mkdir -p $PKG/usr/sbin
+install -m755 -o root $CWD/convertpkg-compat32 $PKG/usr/sbin/convertpkg-compat32
+install -m755 -o root $CWD/massconvert32.sh $PKG/usr/sbin/massconvert32.sh
+
+# Add documentation:
+mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
+# Much of this README is from the Slamd64 file:
+# http://slackware.org.uk/slamd64/slamd64-current/slamd64-FAQ/Compiling.txt
+cat $CWD/README > $PKG/usr/doc/$PRGNAM-$VERSION/README
+# Add this script:
+cat $0 > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
+
+# Add a package description:
+mkdir -p $PKG/install
+cat $CWD/slack-desc > $PKG/install/slack-desc
+
+# Build the package:
+cd $PKG
+/sbin/makepkg -l y -c n $TMP/${PRGNAM}-${VERSION}-${ARCH}-${BUILD}${TAG}.tgz
+

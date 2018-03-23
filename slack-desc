@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last column you can put a character in.  You must
+# make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':'.
+
+              |-----handy-ruler------------------------------------------------------|
+compat32-tools: compat32-tools (32bit compatibility tools for 64bit Slackware)
+compat32-tools:
+compat32-tools: The compat32-tools are a series of scripts that allow
+compat32-tools: the user to add a 32bit compatibility layer (multilib)
+compat32-tools: to 64bit Slackware.
+compat32-tools:
+compat32-tools:
+compat32-tools:
+compat32-tools:
+compat32-tools: Written by Fred Emmott and Eric Hameleers
+compat32-tools:

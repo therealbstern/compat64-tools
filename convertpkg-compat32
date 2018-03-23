@@ -1,0 +1,402 @@
+#!/bin/sh
+
+# $Id: convertpkg-compat32,v 1.29 2017/06/08 08:52:41 eha Exp eha $
+
+# Copyright (c) 2009  Frederick Emmott <fred@slackware.com>
+# Copyright (c) 2009, 2010, 2011, 2012, 2013  Eric Hameleers, Eindhoven, NL
+# 
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+# 
+# THE SOFTWARE IS PROVIDED ``AS IS'' AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+# Contributions to the udev cleanup code by phenixia2003.
+
+# ---------------------------------------------------------------------------
+
+# Convert a 32-bit Slackware package (s390 or x86)
+# to a compatibility package for a 64bit multilib Slackware.
+
+# Catch errors and display the offending line number:
+set -e
+trap 'echo "$0 FAILED at line ${LINENO}"' ERR
+
+# Package-independent variables
+ARCH=${ARCH:-$(uname -m)}
+TAG=${TAG:-compat32}      # tag to be used for the converted package
+OUTPUT=${OUTPUT:-/tmp}    # where the package gets created
+TMP=${TMP:-/tmp}          # location for temporary files
+
+# $BUILD can also be overridden, though it in-turn is overridden
+# if an output package name is specified on the command line.
+
+# Blacklist of packages not to use this script on (these *have* to be compiled
+# on a 64bit box):
+BLACKLIST="
+glibc.*
+kernel.*
+gcc.*
+"
+
+function show_help () {
+  # Write the help text to output:
+  cat <<EOF
+
+Usage: $0 <-i input_package_file_name> [-o output_package_file_name] [-d output_directory] [-s custom_slack_desc] [-e custom_package_extension]
+
+$(basename $0) is used to convert a 32-bit Slackware package
+into a '32-bit compatibility' package, for installion on 64-bit Slackware.
+
+required parameters::
+  -i input_package_file_name     : 32-bit package to convert
+optional parameters::
+  -d destination_directory       : create package in this directory
+  -e extension                   : use another valid extension instead of 'txz'
+  -o output_package_file_name    : use custom output package filename
+  -s output_slack_desc           : custom slack-desc file to use for new package
+
+environment variables:
+  ARCH   (target architecture; defaults to \$(uname -m))
+  BUILD  (build number for output package; defaults to same as input package.
+          output_package_file_name overrides this value)
+  TAG    (build tag, defaults to ${TAG}))
+  OUTPUT (location to create the package; defaults to ${OUTPUT})
+  TMP    (location for temporary files; defaults to ${TMP})
+
+EOF
+}
+
+# Zero some initial variables:
+OUTPKG=""
+PKGEXT="txz"
+PKGFILE=""
+PKGPATH=""
+SLACKDESC=""
+
+# Parse the commandline parameters:
+while [ ! -z "$1" ]; do
+  case $1 in
+    -d|--destdir)
+      OUTPUT="$(cd ${2}; pwd)"  # can be overruled in the "-o" argument!
+      shift 2
+      ;;
+    -e|--extension)
+      PKGEXT="${2}"
+      shift 2
+      ;;
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    -i|--inpkg)
+      PKGFILE="$(basename ${2})"
+      PKGPATH="$(cd $(dirname ${2}); pwd)/$(basename ${2})"
+      shift 2
+      ;;
+    -o|--outpkg)
+      OUTPKG="$(basename ${2})"
+      # Check if the user added a directory component. If yes, it will override
+      # whatever was supplied with the "-d" argument!:
+      if [ "$OUTPKG" != "${2}" ]; then
+        OUTPUT="$(cd $(dirname ${2}); pwd)"
+      fi
+      shift 2
+      ;;
+    -s|--slack-desc)
+      SLACKDESC="$(cd $(dirname ${2}); pwd)/$(basename ${2})"
+      shift 2
+      ;;
+    -*)
+      echo "Unsupported parameter '$1'!"
+      exit 1
+      ;;
+    *)
+      # Do nothing
+      shift
+      ;;
+  esac
+done
+
+# Bail out now if we did not get an input package:
+if [ -z "$PKGFILE" -o ! -e "$PKGPATH" ]; then
+  echo "** Please supply a valid input package! **"
+  show_help
+  exit 3
+fi
+
+# if a destination_directory was specified, abort now if we can not create it:
+if [ -n "$OUTPUT" -a ! -d "$OUTPUT" ]; then
+  echo "Creating output directory '$OUTPUT'..."
+  mkdir -p $OUTPUT
+  if [ ! -w "$OUTPUT" ]; then
+    echo "Creating output directory '$OUTPUT' failed!"
+    exit 3
+  fi
+fi
+
+# Figure out initial variables
+PKGNAM=$(echo $PKGFILE | rev | cut -f4- -d- | rev)
+VERSION=$(echo $PKGFILE | rev | cut -f3 -d- | rev)
+BUILD=${BUILD:-$(echo $PKGFILE | rev | cut -f1 -d- | cut -f2- -d. | rev)}
+OUTPKG=${OUTPKG:-"${PKGNAM}-compat32-${VERSION}-${ARCH}-${BUILD}${TAG}.${PKGEXT}"}
+# With OUTPKG as commandline param, it may not just be "${PKGNAM}-compat32":
+PKGNAM32=$(echo $OUTPKG | rev | cut -f4- -d- | rev)
+
+for regex in $BLACKLIST; do
+  if echo $PKGNAM | grep -Pq "$regex"; then
+    echo "Package $PKGNAM is blacklisted by '$regex', aborting."
+    exit 2
+  fi
+done
+
+echo "Converting package $PKGNAM (version $VERSION) to $OUTPKG ($PKGNAM32)"
+
+PKG=$TMP/package-$PKGNAM32
+rm -rf $PKG
+mkdir -p $PKG $TMP
+cd $PKG || exit 1
+
+# Explode the package into $PKG .
+# We will need to slightly modify an existing install/doinst.sh
+# It should still create symlinks and run other errands when the resulting
+# package is installed, but should not mess with the files we are going to
+# remove for the -compat32 package.
+/sbin/explodepkg $PKGPATH
+
+# Check if the user fed us a 64bit package:
+if [ -d usr/lib64 -o -d lib64 ]; then
+  echo "** This script converts 32bit packages for Slackware64 multilib!"
+  echo "** It looks like you gave me a 64bit package instead."
+  echo "** Are you certain you want to convert the package $(basename $PKGPATH) ?"
+  echo "** Press [Ctrl]-[C] now if you want to abort the script."
+  read JUNK
+fi
+
+#
+# Take special care of gtk+2, gdk-pixbuf2, pango and udev when stripping things!
+#
+
+# Remove stuff we only want from the 64-bit package:
+if [ "$PKGNAM" = "gtk+2" -o "$PKGNAM" = "gtk+3" -o "$PKGNAM" = "gdk-pixbuf2" -o "$PKGNAM" = "pango" ];
+then
+  rm -rf bin sbin usr/{include,sbin,share,info,man,libexec}
+else
+  rm -rf etc bin sbin usr/{include,sbin,share,info,man,libexec}
+fi
+
+# Take care of 32bit binaries:
+if [ "$PKGNAM" = "gtk+2" -o "$PKGNAM" = "gtk+3" -o "$PKGNAM" = "gdk-pixbuf2" -o "$PKGNAM" = "pango" ];
+then
+  find usr/bin -type f ! -name "*-32" -exec mv {} {}-32 \;
+elif [ "$PKGNAM" = "llvm" ]; then
+  mkdir -p usr/bin/32
+  for BIN in usr/bin/* ; do
+    ln -s ../$(basename $BIN)-32 usr/bin/32/$(basename $BIN)
+  done
+  find usr/bin -maxdepth 1 -type f ! -name "*-32" -exec mv {} {}-32 \;
+elif [ -d usr/bin ]; then
+  mkdir ./32
+  find usr/bin -type f -exec mv {} ./32 \;
+  rm -rf usr/bin/*
+  mv ./32 usr/bin/
+fi
+
+if [ "$PKGNAM" = "udev" -o "$PKGNAM" = "eudev" ]; then
+  # These are part of the 64-bit package:
+  rm -rf lib/firmware
+  rm -rf lib/modprobe.d
+  rm -rf lib/udev
+  rm -rf run
+  # Only in Slackware 13.37:
+  rm -rf usr/lib/ConsoleKit
+fi
+
+# Strip doinst.sh from everything we can't use:
+if [ "$PKGNAM" = "gtk+2" -o "$PKGNAM" = "gtk+3" -o "$PKGNAM" = "gdk-pixbuf2" -o "$PKGNAM" = "pango" ];
+then
+  # Get rid of symlinks in bin and doc directory:
+  cat install/doinst.sh | grep -v '( cd usr/bin' | grep -v '( cd usr/doc' \
+    > install/doinst.sh.2
+  cat install/doinst.sh.2 > install/doinst.sh
+  rm -f install/doinst.sh.2
+  if [ "$PKGNAM" = "gtk+2" ]; then
+    # Deal with the .new file in gtk+2 that does not get processed:
+    echo "config etc/gtk-2.0/im-multipress.conf.new" \
+      >> install/doinst.sh
+  fi
+elif [ "$PKGNAM" = "udev" -o "$PKGNAM" = "eudev" ]; then
+  # Get rid of symlinks in sbin and lib directory, and all the other 
+  # non-symlinking stuff:
+  cat install/doinst.sh \
+    | grep '( cd ' \
+    | grep -v '( cd sbin' | grep -v '( cd lib/udev' \
+    | grep -v '( cd usr/lib/ConsoleKit/run-seat.d' \
+     > install/doinst.sh.2
+  cat install/doinst.sh.2 > install/doinst.sh
+  rm -f install/doinst.sh.2
+elif [ -f install/doinst.sh ]; then
+  # Check for a 'config()' section:
+  if grep -q 'config()' install/doinst.sh ; then
+    cat <<-"EOT" > install/doinst.sh.1
+	config() {
+	  NEW="$1"
+	  OLD="$(dirname $NEW)/$(basename $NEW .new)"
+	  # If there's no config file by that name, mv it over:
+	  if [ ! -r $OLD ]; then
+	    mv $NEW $OLD
+	  elif [ "$(cat $OLD | md5sum)" = "$(cat $NEW | md5sum)" ]; then
+	    # toss the redundant copy
+	    rm $NEW
+	  fi
+	  # Otherwise, we leave the .new copy for the admin to consider...
+	}
+	preserve_perms() {
+	  NEW="$1"
+	  OLD="$(dirname ${NEW})/$(basename ${NEW} .new)"
+	  if [ -e ${OLD} ]; then
+	    cp -a ${OLD} ${NEW}.incoming
+	    cat ${NEW} > ${NEW}.incoming
+	    mv ${NEW}.incoming ${NEW}
+	  fi
+	  config ${NEW}
+	}
+	EOT
+  else
+    echo -n "" > install/doinst.sh.1
+  fi
+  # Only keep lines that deal with symlinks in bin/32 and lib directories,
+  # and the config/preserve_perms commands that apply outside of /etc/:
+  ( cat install/doinst.sh \
+      |grep -v "etc/ld.so.conf" |grep -v "../sbin/" \
+      |grep -Ev '(config etc|preserve_perms etc)' \
+      |grep -E '(usr/bin |lib |lib/|^config |^preserve_perms )' > install/doinst.sh.2
+    cat install/doinst.sh.1 install/doinst.sh.2 \
+      |sed -e 's# usr/bin# usr/bin/32#g' \
+      |sed -e 's#32 ; ln -sf ../#&../#' > install/doinst.sh
+    rm -f install/doinst.sh.1 install/doinst.sh.2 ) || true
+fi
+
+# Post-cleanup-cleanup to catch sscript errors:
+if [ "$PKGNAM" = "samba" ]; then
+  # Get rid of a useless (because taken care of in 64bit package) block:
+  cat install/doinst.sh \
+    | grep -v 'samba/private' \
+     > install/doinst.sh.2
+  cat install/doinst.sh.2 > install/doinst.sh
+  rm -f install/doinst.sh.2
+fi
+
+# The cxxlibs need some extra consideration because the libraries in
+# /usr/i486-slackware-linux/lib will not be found by Slackware64.
+# Note that as of Slackware 14, "usr/i486-slackware-linux" is gone:
+if [ "$PKGNAM" = "cxxlibs" ]; then
+  if [ -e usr/i486-slackware-linux ] ; then
+    mkdir -p usr/lib  # just in case
+    for OLIB in $(find usr/i486-slackware-linux/lib -type f -maxdepth 1) ; do
+      cp -a $OLIB usr/lib/
+    done
+    cat install/doinst.sh | grep '/i486-slackware-linux' > install/doinst.sh.2
+    cat install/doinst.sh.2 | sed -e 's#/i486-slackware-linux##g' >> install/doinst.sh
+    rm -f install/doinst.sh.2
+  fi
+fi
+
+# The qt package installs several symlinks to /usr/bin which point to
+# binaries in qt's lib directory. We have to strip those from the -compat32
+# package. If you want to build 32bit software that needs these qt binaries,
+# you will have to add /usr/lib/qt/bin/ to your $PATH
+# We will remove a lot of stuff which we do not need in the compat32 package
+# 
+if [ "$PKGNAM" = "qt" -o "$PKGNAM" = "qt3" -o "$PKGNAM" = "qt5" ]; then
+
+  if [ -d usr/lib/qt ] ; then
+    for ITEM in q3porting.xml demos doc examples ; do
+      if [ -e "usr/lib/qt/$ITEM" ] ; then
+        rm -rf "usr/lib/qt/$ITEM"
+      fi
+    done
+  elif [ -d usr/lib/qt5 ] ; then
+    for ITEM in demos doc examples ; do
+      if [ -e "usr/lib/qt5/$ITEM" ] ; then
+        rm -rf "usr/lib/qt5/$ITEM"
+      fi
+    done
+  fi
+
+  cat install/doinst.sh | grep -v 'usr/bin' | grep -v 'opt/kde3/bin' \
+    > install/doinst.sh.2
+  cat install/doinst.sh.2 > install/doinst.sh
+  rm -f install/doinst.sh.2
+
+fi
+
+# Keep documentation we might be required to keep, or is just polite:
+if [ -d usr/doc ]; then
+  find usr/doc -type f ! -iname "Copyright*" -a ! -iname "COPYING*" -a ! -iname "AUTHORS*" -a ! -iname "LICENSE*" -a ! -iname "GPL*" -a ! -iname "LGPL*" -a ! -iname "THANKS*" | xargs -d '\n' rm -f
+  find usr/doc -type d -depth | xargs -d '\n' rmdir --ignore-fail-on-non-empty
+fi
+
+if [ ! -z $SLACKDESC ]; then
+  echo "Using externally provided slack-desc ($SLACKDESC)..."
+  cat $SLACKDESC > install/slack-desc
+else
+  if [ ! -f install/slack-desc ]; then
+    # Non-standard package, missing slack-desc, so we use a template:
+    mkdir -p install
+    cat <<EOT > install/slack-desc
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last column you can put a character in.  You must
+# make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':'.
+
+       |-----handy-ruler------------------------------------------------------|
+$PKGNAM: $PKGNAM 
+$PKGNAM:
+$PKGNAM:
+$PKGNAM:
+$PKGNAM:
+$PKGNAM:
+$PKGNAM:
+$PKGNAM:
+$PKGNAM:
+$PKGNAM:
+$PKGNAM:
+EOT
+  fi
+
+  # Now, re-work the slack-desc:
+
+  # Fix the handy ruler:
+  SPCS=""; while [ ${#SPCS} -lt ${#PKGNAM32} ]; do SPCS=" $SPCS";done
+  sed -i -r "s/^ *\|-/${SPCS}\|-/" install/slack-desc
+
+  # Every line; foo: -> foo-compat32:
+  sed -i "s,$PKGNAM:,$PKGNAM32:," install/slack-desc
+
+  # First line: foo-compat32: foo (description of foo)
+  #   -> foo-compat32: foo-compat32 (description of foo)
+  sed -i "s,$PKGNAM32: $PKGNAM ,$PKGNAM32: $PKGNAM32 ," install/slack-desc
+
+  # Last line: if empty, add 32-bit message
+  sed -i "\$s,^${PKGNAM32}: *$,${PKGNAM32}: This package contains 32-bit compatibility binaries.," install/slack-desc
+fi
+
+# If we ended up with an empty doinst.sh we should remove it now:
+if [ ! -s install/doinst.sh ]; then
+  rm -f install/doinst.sh
+fi
+
+# Make the package (don't process the symlinks):
+/sbin/makepkg --linkadd n --chown n $OUTPUT/$OUTPKG
+
+echo "Package created:  $OUTPUT/$OUTPKG"
+

@@ -1,0 +1,74 @@
+#!/bin/bash
+#$Id: check-compat32,v 1.1 2010/06/28 14:53:57 eha Exp eha $
+#
+# Purpose:
+#   To check if any of the installed -compat32 packages is older than
+#   the accompanying 64-bit package.
+#
+# Author:
+#   Eric Hameleers <alien@slackware.com>
+#
+
+# No verbose output by default:
+DEBUG=0
+
+showhelp () {
+cat <<EOT
+
+Script name:
+  $(basename $0)
+Purpose:
+  To check if any of the installed -compat32 packages is older than
+  the accompanying 64-bit package.
+Usage:
+  Run the program without parameters to make it check your packages.
+Parameters:
+  -h|--help        Show this help text
+  -v|--verbose     Verbose output
+
+EOT
+}
+
+# Parse the commandline parameters:
+while [ ! -z "$1" ]; do
+  case $1 in
+    -h|--help)
+      showhelp
+      exit 0
+      ;;
+    -v|--verbose)
+      DEBUG=1
+      shift
+      ;;
+    -*)
+      echo "Unsupported parameter '$1'!"
+      exit 1
+      ;;
+    *)
+      # Do nothing
+      shift
+      ;;
+  esac
+done
+
+
+# Loop through the -compat32 packages we find installed,
+# and compare their versions to the 64-bit packages
+[ $DEBUG -ne 0 ] && echo "-- Checking installed packages..."
+for FULL32 in $(find /var/log/packages/ -name "*-compat32-*") ; do
+  PKG32=$(echo ${FULL32} |cut -f5 -d'/' |rev |cut -f4- -d'-' |rev)
+  VER32=$(echo ${FULL32} |cut -f5 -d'/' |rev |cut -f3 -d'-' |rev)
+
+  [ $DEBUG -ne 0 ] && echo ">> Found '$PKG32'..."
+
+  PKG64=$(echo ${FULL32} |cut -f5 -d'/' |rev |cut -f5- -d'-' |rev)
+  VER64=$($(find /var/log/packages/ -name "${PKG64}*" |grep -v -- -compat32) |cut -f5 -d'/' |rev |cut -f3 -d'-' |rev |grep "${PKG64}$")
+
+  # Issue a warning if the version of the 64-bit package differs:
+  if [ -n "$VER64" -a "$VER32" != "$VER64" ]; then
+      echo "** Package '$PKG64' has version '$VER64' but package '$PKG32' has version '$VER32'"
+  fi
+done
+
+[ $DEBUG -ne 0 ] && echo "-- Finished checking installed packages."
+

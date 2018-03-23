@@ -1,0 +1,33 @@
+#!/bin/bash
+# $Id: gccwrapper,v 1.1 2009/09/14 10:35:12 eha Exp eha $
+# Copyright (C) 2007  Frederick Emmott <mail@fredemmott.co.uk>
+# Copyright 2009  Eric Hameleers, Eindhoven, NL
+# Based on the file with the same name which is part of
+# the Slamd64 Linux project (www.slamd64.com)
+
+# Distributed under the GNU General Public License, version 2, as
+# published by the Free Software Foundation.
+
+# Find the stub gcc's directory:
+STUBPATH=$(cd $(dirname $0); pwd)
+
+# Now find the "real" gcc
+REALCC=$(PATH="$(echo $PATH | sed "s#\(.*\):\?$STUBPATH/\?:\?#\1#")" which $(basename $0))
+
+# Filter out -m64 from $@ (this is sometimes added even though we specify -m32)
+declare -a Arguments
+for i; do
+  case "$i" in 
+    -m64)
+      ;;
+    *)
+      Arguments[${#Arguments[@]}]="$i"
+      ;;
+  esac
+done
+
+# Compiling a 32bit program requires we call gcc with -m32
+$REALCC -m32 "${Arguments[@]}"
+
+# Exit with $REALCC's exit code
+exit $?
