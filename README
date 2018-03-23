@@ -1,3 +1,13 @@
+WARNING * WARNING * WARNING * WARNING * WARNING * WARNING * WARNING * WARNING
+
+This has not been tested at all and is currently a naive transposition of "32"
+and "64" throughout the scripts.
+
+Use at your own risk.
+
+WARNING * WARNING * WARNING * WARNING * WARNING * WARNING * WARNING * WARNING
+
+
 Using 64-bit Binaries on 32-bit Slackware
 -----------------------------------------
 
@@ -24,6 +34,11 @@ convert these packages to 'compat64' packages.  All that the script needs is a
 single command-line argument: the path to a local 64-bit Slackware package
 tree (this is the directory below which you find 'a', 'ap', ... 'y'
 subdirectories).
+
+You will also need qemu-x64 installed, so that you can run 64-bit binaries on
+a 32-bit kernel.  (This does work, despite allegations to the contrary, though
+it is certainly not as fast as running 32 binaries on a 64 bit kernel
+natively.)
 
 
 Building 64-bit binaries on 32-bit Slackware
