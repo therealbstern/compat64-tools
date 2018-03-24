@@ -77,6 +77,10 @@ slackpkg for regular Slackware.  See
 [However, no such program yet exists for 32-bit Slackware, to the best of my
 knowledge.  -BAS]
 
-================================================
-Eric Hameleers <alien@slackware.com> 15-Nov-2010
-Ben Stern <bas-github@fortian.com> 23-Mar-2018
+---
+
+Originally by Eric Hameleers <alien@slackware.com> 15-Nov-2010
+
+Minor modifications by Ben Stern <bas-github@fortian.com> 23-Mar-2018
+
+Licensed under CC Attribution-Share Alike 4.0 International
