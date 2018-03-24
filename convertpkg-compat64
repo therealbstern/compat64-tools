@@ -171,7 +171,7 @@ cd $PKG || exit 1
 /sbin/explodepkg $PKGPATH
 
 # Check if the user fed us a 32-bit package:
-if [ -d usr/lib32 -o -d lib32 ]; then
+if [ -d usr/lib -o -d lib ]; then
   echo "** This script converts 64-bit packages for Slackware32 multilib!"
   echo "** It looks like you gave me a 32-bit package instead."
   echo "** Are you certain you want to convert the package $(basename $PKGPATH) ?"
@@ -194,7 +194,7 @@ fi
 # Take care of 64-bit binaries:
 if [ "$PKGNAM" = "gtk+2" -o "$PKGNAM" = "gtk+3" -o "$PKGNAM" = "gdk-pixbuf2" -o "$PKGNAM" = "pango" ];
 then
-  find usr/bin -type f ! -name "*-64" -exec mv {} {}-64 \;
+  find usr/bin -type f ! -name "*-64" -exec mv -v {} {}-64 \;
 elif [ "$PKGNAM" = "llvm" ]; then
   mkdir -p usr/bin/64
   for BIN in usr/bin/* ; do
