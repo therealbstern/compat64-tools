@@ -8,12 +8,12 @@
               |-----handy-ruler------------------------------------------------------|
 compat64-tools: compat64-tools (64-bit compatibility tools for 32-bit Slackware)
 compat64-tools:
-compat64-tools: The compat64-tools are a series of scripts that allow
-compat64-tools: the user to add a 64-bit compatibility layer (multilib)
-compat64-tools: to 32-bit Slackware.
+compat64-tools: The compat64-tools are a series of scripts that allow the user to add
+compat64-tools: a 64-bit compatibility layer (multilib) to 32-bit Slackware.
+compat64-tools:
 compat64-tools:
 compat64-tools:
 compat64-tools:
 compat64-tools: Written by Fred Emmott and Eric Hameleers,
-compat64-tools: with minor changes by Ben Stern
+compat64-tools: with minor changes by Ben Stern.
 compat64-tools:

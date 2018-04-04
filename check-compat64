@@ -1,14 +1,14 @@
-#!/bin/bash
+#!/bin/sh
 
 # $Id: check-compat64,v 1.1 2010/06/28 14:53:57 eha Exp eha $
-#
+
 # Purpose:
-#   To check if any of the installed -compat64 packages is older than
-#   the accompanying 32-bit package.
-#
-# Author:
+#   To check if any of the installed -compat64 packages is older than the
+#   accompanying 32-bit package.
+
+# Authors:
 #   Eric Hameleers <alien@slackware.com>
-#   Ben Stern <bstern@fortian.com>
+#   Ben Stern <bas-github@fortian.com>
 
 # No verbose output by default:
 DEBUG=0
@@ -19,8 +19,8 @@ cat <<EOT
 Script name:
   $(basename $0)
 Purpose:
-  To check if any of the installed -compat64 packages is older than
-  the accompanying 32-bit package.
+  To check if any of the installed -compat64 packages is older than the
+  accompanying 32-bit package.
 Usage:
   Run the program without parameters to make it check your packages.
 Parameters:
@@ -30,7 +30,7 @@ Parameters:
 EOT
 }
 
-# Parse the commandline parameters:
+# Parse the command-line parameters:
 while [ ! -z "$1" ]; do
   case $1 in
     -h|--help)
@@ -53,17 +53,17 @@ while [ ! -z "$1" ]; do
 done
 
 
-# Loop through the -compat64 packages we find installed,
-# and compare their versions to the 32-bit packages
+# Loop through the -compat64 packages we find installed, and compare their
+# versions to the 32-bit packages
 [ $DEBUG -ne 0 ] && echo "-- Checking installed packages..."
 for FULL64 in $(find /var/log/packages/ -name "*-compat64-*") ; do
-  PKG64=$(echo ${FULL64} |cut -f5 -d'/' |rev |cut -f4- -d'-' |rev)
-  VER64=$(echo ${FULL64} |cut -f5 -d'/' |rev |cut -f3 -d'-' |rev)
+  PKG64=$(echo ${FULL64} | cut -f5 -d'/' | rev | cut -f4- -d'-' | rev)
+  VER64=$(echo ${FULL64} | cut -f5 -d'/' | rev | cut -f3  -d'-' | rev)
 
   [ $DEBUG -ne 0 ] && echo ">> Found '$PKG64'..."
 
-  PKG32=$(echo ${FULL64} |cut -f5 -d'/' |rev |cut -f5- -d'-' |rev)
-  VER32=$($(find /var/log/packages/ -name "${PKG32}*" |grep -v -- -compat64) |cut -f5 -d'/' |rev |cut -f3 -d'-' |rev |grep "${PKG32}$")
+  PKG32=$(echo ${FULL64} | cut -f5 -d'/' | rev | cut -f5- -d'-' | rev)
+  VER32=$($(find /var/log/packages/ -name "${PKG32}*" | grep -v -- -compat64) | cut -f5 -d'/' | rev | cut -f3 -d'-' | rev | grep "${PKG32}$")
 
   # Issue a warning if the version of the 32-bit package differs:
   if [ -n "$VER32" -a "$VER64" != "$VER32" ]; then

@@ -1,19 +1,19 @@
-#!/bin/bash
+#!/bin/sh
 # $Id: massconvert64.sh,v 1.79 2018/01/28 15:57:09 eha Exp eha $
-#
+
 # Written 2009, 2010, 2011, 2012, 2013  Eric Hameleers, Eindhoven, NL
-#
-# Convert 64-bit slackware packages 'en masse' into compatibility packages
-# to be installed on slackware32 - providing the 64-bit part of multilib.
-# The string "-compat64" is added at the end of package name when a
-# compatibility package gets created.  This allows it to be installed
-# on slackware32 alongside the native 32-bit versions.
+# Copyright 2018  Ben Stern <bas-github@fortian.com>
+
+# Convert 64-bit slackware packages 'en masse' into compatibility packages to be
+# installed on slackware32 - providing the 64-bit part of multilib.  The string
+# "-compat64" is added at the end of package name when a compatibility package
+# gets created.  This allows it to be installed on slackware32 alongside the
+# native 32-bit versions.
 # For example: the original 64-bit package "bzip2" will be converted to a new
 #              package with the name "bzip2-compat64"
-#
-# You also have to install multilib versions of glibc and gcc !
+# You also have to install multilib versions of glibc and gcc!
 
-# Before we start
+# Before we start...
 [ -x /bin/id ] && CMD_ID="/bin/id" || CMD_ID="/usr/bin/id"
 if [ "$($CMD_ID -u)" != "0" ]; then
   echo "You need to be root to run $(basename $0)."
@@ -65,7 +65,7 @@ Optional parameter::
                                converted (useful for cron jobs).
 
 Example of a useable Slackware URL:
-  http://slackware.mirrors.tds.net/pub/slackware/slackware-14.0/slackware
+  http://slackware.mirrors.tds.net/pub/slackware/slackware-14.2/slackware
 
 EOF
 }
@@ -130,7 +130,7 @@ function get_url_pkg () {
   [ "$FP" != "ZALIEN" ] && echo "$DURL/$FP" || echo ""
 }
 
-# A function to retrieve the fullname of a package:
+# A function to retrieve the full name of a package:
 function get_pkgfullpath () {
   local IP="$1"
   local BP="$(basename $1)"
@@ -145,8 +145,8 @@ function get_pkgfullpath () {
   [ "$FP" != "ZALIEN" ] && echo "$FP" || echo ""
 }
 
-# A function to convert a package,
-# downloading it first if needed, and taking patches into account:
+# A function to convert a package, downloading it first if needed, and taking
+# patches into account:
 function conv_pkg () {
   local BP="$1"
   local SERIES="$2"

@@ -2,25 +2,25 @@
 
 # Copyright (c) 2009  Frederick Emmott <fred@slackware.com>
 # Copyright (c) 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018  Eric Hameleers, Eindhoven, NL
+# Copyright (C) 2018  Ben Stern <bas-github@fortian.com>
 # All rights reserved.
-#
+
 # Redistribution and use of this script, with or without modification, is
 # permitted provided that the following conditions are met:
-#
-# 1. Redistributions of this script must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-#
-#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
-#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
-#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# 1. Redistributions of this script must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+# EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+# IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
 PRGNAM=compat64-tools
 VERSION=3.7
@@ -34,8 +34,8 @@ PKG=$TMP/package-$PRGNAM
 rm -rf $PKG
 mkdir -p $TMP $PKG
 
-# Add the scripts that change your environment for 64-bit compilation
-# (but do not make it executable by default):
+# Add the scripts that change your environment for 64-bit compilation (but don't
+# make it executable by default):
 mkdir -p $PKG/etc/profile.d
 install -o root -m644 $CWD/64dev.sh $PKG/etc/profile.d/64dev.sh
 install -o root -m644 $CWD/64dev.csh $PKG/etc/profile.d/64dev.csh
@@ -63,9 +63,9 @@ install -o root -m755 $CWD/gfortranwrapper $PKG/usr/bin/64/gfortran
   ln -s gfortran fortran;
 )
 
-# Add the two scripts that will facilitate converting 64-bit Slackware
-# packages to a format that is suitable to be installed on 32-bit Slackware.
-# Since these scripts should be run as root, dump them into a sbin directory:
+# Add the two scripts that will facilitate converting 64-bit Slackware packages
+# to a format that is suitable to be installed on 32-bit Slackware.  Since these
+# scripts should be run as root, dump them into a sbin directory:
 mkdir -p $PKG/usr/sbin
 install -m755 -o root $CWD/convertpkg-compat64 $PKG/usr/sbin/convertpkg-compat64
 install -m755 -o root $CWD/massconvert64.sh $PKG/usr/sbin/massconvert64.sh
@@ -74,7 +74,7 @@ install -m755 -o root $CWD/massconvert64.sh $PKG/usr/sbin/massconvert64.sh
 mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
 # Much of this README is from the Slamd64 file:
 # http://slackware.org.uk/slamd64/slamd64-current/slamd64-FAQ/Compiling.txt
-cat $CWD/README > $PKG/usr/doc/$PRGNAM-$VERSION/README
+cat $CWD/README.md > $PKG/usr/doc/$PRGNAM-$VERSION/README.md
 # Add this script:
 cat $0 > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
 

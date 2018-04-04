@@ -1,12 +1,13 @@
 #!/bin/csh
-# $Id: 32dev.csh,v 1.2 2014/01/16 09:32:06 eha Exp eha $
-# Created by Jim Diamond (Jim.Diamond@acadiau.ca),
-# Based on 32dev.sh, which is part of
-# the Slamd64 Linux project (www.slamd64.com),
-# Copyright (C) 2007  Frederick Emmott <mail@fredemmott.co.uk>
 
-# Distributed under the GNU General Public License, version 2, as
-# published by the Free Software Foundation.
+# $Id: 64dev.csh,v 1.2 2014/01/16 09:32:06 eha Exp eha $
+# Created by Jim Diamond (Jim.Diamond@acadiau.ca),
+# Based on 32dev.sh, part of the Slamd64 Linux project (www.slamd64.com),
+# Copyright (C) 2007  Frederick Emmott <mail@fredemmott.co.uk>
+# Copyright (C) 2018  Ben Stern <bas-github@fortian.com>
+
+# Distributed under the GNU General Public License, version 2, as published
+# by the Free Software Foundation.
 
 setenv PATH "/usr/bin/64:/usr/lib/qt/bin:$PATH"
 setenv CC "gcc" # This is actually the /usr/bin/64/gcc wrapper

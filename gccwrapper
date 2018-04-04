@@ -1,12 +1,12 @@
 #!/bin/bash
 # $Id: gccwrapper,v 1.1 2009/09/14 10:35:12 eha Exp eha $
 # Copyright (C) 2007  Frederick Emmott <mail@fredemmott.co.uk>
-# Copyright 2009  Eric Hameleers, Eindhoven, NL
-# Based on the file with the same name which is part of
-# the Slamd64 Linux project (www.slamd64.com)
+# Copyright (C) 2009  Eric Hameleers, Eindhoven, NL
+# Copyright (C) 2018  Ben Stern <bas-github@fortian.com>
+# Based on gccwrapper from the Slamd64 Linux project (www.slamd64.com)
 
-# Distributed under the GNU General Public License, version 2, as
-# published by the Free Software Foundation.
+# Distributed under the GNU General Public License, version 2, as published by
+# the Free Software Foundation.
 
 # Find the stub gcc's directory:
 STUBPATH=$(cd $(dirname $0); pwd)

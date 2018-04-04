@@ -3,20 +3,21 @@
 # $Id$
 
 # Copyright  2014  Eric Hameleers, Eindhoven, NL
-# 
+# Copyright  2018  Ben Stern <bas-github@fortian.com>
+
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
 # copyright notice and this permission notice appear in all copies.
-# 
+
 # THE SOFTWARE IS PROVIDED ``AS IS'' AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 # WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+# SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER
+# RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+# NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE
+# USE OR PERFORMANCE OF THIS SOFTWARE.
 
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 # Extract, test and manage doinst.sh scripts of compat64 packages.
 
@@ -30,8 +31,8 @@ TAG=${TAG:-compat64}      # tag to be used for the converted package
 OUTPUT=${OUTPUT:-/tmp}    # where the package gets created
 TMP=${TMP:-/tmp}          # location for temporary files
 
-# $BUILD can also be overridden, though it in-turn is overridden
-# if an output package name is specified on the command line.
+# $BUILD can also be overridden, though it in-turn is overridden if an output
+# package name is specified on the command line.
 
 # Blacklist of packages not to use this script on (these *have* to be compiled
 # on a 32-bit box):
@@ -139,11 +140,10 @@ rm -rf $PKG
 mkdir -p $PKG $TMP
 cd $PKG || exit 1
 
-# Explode the package into $PKG .
-# We will need to slightly modify an existing install/doinst.sh
-# It should still create symlinks and run other errands when the resulting
-# package is installed, but should not mess with the files we are going to
-# remove for the -compat64 package.
+# Explode the package into ${PKG}.  We will need to slightly modify an existing
+# install/doinst.sh It should still create symlinks and run other errands when
+# the resulting package is installed, but should not mess with the files we are
+# going to remove for the -compat64 package.
 /sbin/explodepkg $PKGPATH
 
 # Check if the user fed us a 32-bit package:
@@ -155,9 +155,7 @@ if [ -d usr/lib -o -d lib ]; then
   read JUNK
 fi
 
-#
 # Take special care of gtk+2, gdk-pixbuf2, pango and udev when stripping things!
-#
 
 # No doinst.sh ?
 if [ ! -e install/doinst.sh ]; then
@@ -234,14 +232,12 @@ if [ "$PKGNAM" = "cxxlibs" ]; then
   fi
 fi
 
-# The qt package installs several symlinks to /usr/bin which point to
-# binaries in qt's lib directory. We have to strip those from the -compat64
-# package. If you want to build 64-bit software that needs these qt binaries,
-# you will have to add /usr/lib/qt/bin/ to your $PATH
-# We will remove a lot of stuff which we do not need in the compat64 package
-# 
+# The qt package installs several symlinks to /usr/bin which point to binaries
+# in qt's lib directory.  We have to strip those from the -compat64 package.  If
+# you want to build 64-bit software that needs these qt binaries, you will have
+# to add /usr/lib/qt/bin/ to your $PATH.  We will remove a lot of stuff which we
+# do not need in the compat64 package
 if [ "$PKGNAM" = "qt" -o "$PKGNAM" = "qt3" ]; then
-
   if [ -d usr/lib/qt ] ; then
     for ITEM in q3porting.xml demos doc examples ; do
       if [ -e "usr/lib/qt/$ITEM" ] ; then
@@ -254,11 +250,9 @@ if [ "$PKGNAM" = "qt" -o "$PKGNAM" = "qt3" ]; then
     > install/doinst.sh.2
   cat install/doinst.sh.2 > install/doinst.sh
   rm -f install/doinst.sh.2
-
 fi
 
 # Write the mangled script to $OUTPUT:
 cat install/doinst.sh > $OUTPUT/$PKGNAM64
 
 echo "The dsinst.sh script has been extracted and converted."
-

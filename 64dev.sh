@@ -1,12 +1,13 @@
 #!/bin/sh
-# $Id: 32dev.sh,v 1.4 2014/10/02 09:31:37 eha Exp eha $
-# Copyright (C) 2007  Frederick Emmott <mail@fredemmott.co.uk>
-# Copyright 2009  Eric Hameleers, Eindhoven, NL
-# Based on the file with the same name which is part of
-# the Slamd64 Linux project (www.slamd64.com)
 
-# Distributed under the GNU General Public License, version 2, as
-# published by the Free Software Foundation.
+# $Id: 64dev.sh,v 1.4 2014/10/02 09:31:37 eha Exp eha $
+# Copyright (C) 2007  Frederick Emmott <mail@fredemmott.co.uk>
+# Copyright (C) 2009  Eric Hameleers, Eindhoven, NL
+# Copyright (C) 2018  Ben Stern <bas-github@fortian.com>
+# Based on 32dev.sh, part of the Slamd64 Linux project (www.slamd64.com)
+
+# Distributed under the GNU General Public License, version 2, as published by
+# the Free Software Foundation.
 
 # Modify the compilation/linking environment:
 export PATH="/usr/bin/64:/usr/lib/qt/bin:$PATH"
@@ -15,7 +16,7 @@ export CXX="g++"
 export FC="gfortran" # This is actually the /usr/bin/64/gfortran wrapper
 export F77="gfortran"
 
-# Change the shell prompt to make it clear that we are in 32bit mode:
+# Change the shell prompt to make it clear that we are in 64-bit mode:
 PS1='\u@\h (64bit):\w\$ '
 
 # Check for Qt5, Qt4 and the old 'compatibility install' of Qt3:
@@ -29,16 +30,14 @@ if [ -d /usr/lib/qt5 ]; then
   export QT5DIR=/usr/lib/qt5
 fi
 
-if [ ! "$LD_LIBRARY_PATH" = "" ]; then
-  export LD_LIBRARY_PATH="/usr/local/lib:/lib:/usr/lib:$LD_LIBRARY_PATH"
-else
+if [ -z "$LD_LIBRARY_PATH" ]; then
   export LD_LIBRARY_PATH="/usr/local/lib:/lib:/usr/lib"
-fi
-
-if [ ! "$PKG_CONFIG_PATH" = "" ]; then
-  export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/usr/lib/pkgconfig:$PKG_CONFIG_PATH"
 else
-  export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/usr/lib/pkgconfig"
+  export LD_LIBRARY_PATH="/usr/local/lib:/lib:/usr/lib:$LD_LIBRARY_PATH"
 fi
 
-
+if [ -z "$PKG_CONFIG_PATH" ]; then
+  export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/usr/lib/pkgconfig"
+else
+  export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/usr/lib/pkgconfig:$PKG_CONFIG_PATH"
+fi

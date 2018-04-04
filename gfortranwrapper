@@ -1,9 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 # $Id: gfortranwrapper,v 1.1 2014/01/16 09:32:24 eha Exp eha $
 # Copyright 2014  Eric Hameleers, Eindhoven, NL
+# Copyright 2018  Ben Stern <bas-github@fortian.com>
 
-# Distributed under the GNU General Public License, version 2, as
-# published by the Free Software Foundation.
+# Distributed under the GNU General Public License, version 2, as published by
+# the Free Software Foundation.
 
 # Find the stub gfortran's directory:
 STUBPATH=$(cd $(dirname $0); pwd)
