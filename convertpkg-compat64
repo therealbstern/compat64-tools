@@ -4,7 +4,7 @@
 
 # Copyright (c) 2009  Frederick Emmott <fred@slackware.com>
 # Copyright (c) 2009, 2010, 2011, 2012, 2013  Eric Hameleers, Eindhoven, NL
-# Copyright (c) 2018 Ben Stern <bas-github@fortian.com>
+# Copyright (c) 2018  Ben Stern <bas-github@fortian.com>
 
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -19,8 +19,6 @@
 # USE OR PERFORMANCE OF THIS SOFTWARE.
 
 # Contributions to the udev cleanup code by phenixia2003.
-
-# ------------------------------------------------------------------------------
 
 # Convert a 64-bit Slackware package (s390 or x86) to a compatibility package
 # for a 32-bit multilib Slackware.
@@ -213,8 +211,6 @@ if [ "$PKGNAM" = "udev" -o "$PKGNAM" = "eudev" ]; then
   rm -rf lib/modprobe.d
   rm -rf lib/udev
   rm -rf run
-  # Only in Slackware 13.37:
-  rm -rf usr/lib/ConsoleKit
 fi
 
 # Strip doinst.sh from everything we can't use:
@@ -236,7 +232,6 @@ elif [ "$PKGNAM" = "udev" -o "$PKGNAM" = "eudev" ]; then
   cat install/doinst.sh \
     | grep '( cd ' \
     | grep -v '( cd sbin' | grep -v '( cd lib/udev' \
-    | grep -v '( cd usr/lib/ConsoleKit/run-seat.d' \
      > install/doinst.sh.2
   cat install/doinst.sh.2 > install/doinst.sh
   rm -f install/doinst.sh.2
@@ -290,21 +285,6 @@ if [ "$PKGNAM" = "samba" ]; then
      > install/doinst.sh.2
   cat install/doinst.sh.2 > install/doinst.sh
   rm -f install/doinst.sh.2
-fi
-
-# The cxxlibs need some extra consideration because the libraries in
-# /usr/i486-slackware-linux/lib will not be found by Slackware32.  Note that as
-# of Slackware 14, "usr/i486-slackware-linux" is gone:
-if [ "$PKGNAM" = "cxxlibs" ]; then
-  if [ -e usr/i486-slackware-linux ] ; then
-    mkdir -p usr/lib  # just in case
-    for OLIB in $(find usr/i486-slackware-linux/lib -type f -maxdepth 1) ; do
-      cp -a $OLIB usr/lib/
-    done
-    cat install/doinst.sh | grep '/i486-slackware-linux' > install/doinst.sh.2
-    cat install/doinst.sh.2 | sed -e 's#/i486-slackware-linux##g' >> install/doinst.sh
-    rm -f install/doinst.sh.2
-  fi
 fi
 
 # The qt package installs several symlinks to /usr/bin which point to binaries

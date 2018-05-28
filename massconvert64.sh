@@ -35,42 +35,41 @@ if [ ! -w "$TMP" ]; then
 fi
 
 # Zero some other variables:
-SLACK64ROOT=""
-SLACK64URL=""
-TARGET32ROOT=""
+unset SLACK64ROOT
+unset SLACK64URL
+unset TARGET32ROOT
 
 # Helpful instructions in case the user asks for it:
 function show_help () {
   # Write the help text to output:
   cat <<EOF
 
-Usage: $0 <-i 64-bit_package_tree|-u 64-bit_package_url>  [-d output_directory]
+Usage: $0 <-i 64-bit_package_tree|-u 64-bit_package_url> [-d output_directory]
 
-$(basename $0) converts an essential subset of 64-bit Slackware
-packages into 'compatibility' packages for 32-bit Slackware.
+$(basename $0) converts an essential subset of 64-bit Slackware packages into
+'compatibility' packages for 32-bit Slackware.
 
-Required parameter - one of these two::
-  -i 64-bit_package_tree        A 64-bit Slackware package-tree. It should have
-                               the a,ap,d,..,y directories immediately below.
-  -u 64-bit_package_url         The URL of a http or ftp server containing 64-bit
-                               Slackware packages. It should have the
-                               a,ap,d,..,y directories immediately below.
-Optional parameter::
-  -d destination_directory     create packages in this directory.
-                               By default, the new packages will be created
-                               in your current directory.
-  -n                           Dry-run (do not convert packages, just mention
-                               their names).
-  -q                           Only print output if packages are actually being
-                               converted (useful for cron jobs).
+Required parameter - one of these two:
+-i 64-bit_package_tree    A 64-bit Slackware package-tree. It should have the a,
+                          ap, d, ..., y directories immediately below it.
+-u 64-bit_package_url     The URL of a http or ftp server containing 64-bit
+                          Slackware packages. It should have the a, ap, d, .., y
+                          directories immediately below it.
+Optional parameters:
+-d destination_directory  Create packages in this directory.  By default, the
+                          new packages will be created in the current directory.
+-n                        Dry-run (do not convert packages, just mention their
+                          names).
+-q                        Only print output if packages are actually being
+                          converted (useful for cron jobs).
 
 Example of a useable Slackware URL:
-  http://slackware.mirrors.tds.net/pub/slackware/slackware-14.2/slackware
+  http://slackware.mirrors.tds.net/pub/slackware/slackware64-14.2/slackware
 
 EOF
 }
 
-# Parse the commandline parameters:
+# Parse the command-line parameters:
 while [ ! -z "$1" ]; do
   case $1 in
     -d|--destdir)
