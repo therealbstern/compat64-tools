@@ -28,7 +28,7 @@ set -e
 trap 'echo "$0 FAILED at line ${LINENO}"' ERR
 
 # Package-independent variables
-ARCH=${ARCH:-$(uname -m)}
+PKGARCH=${PKGARCH:-$(uname -m)}
 TAG=${TAG:-compat64}      # tag to be used for the converted package
 OUTPUT=${OUTPUT:-/tmp}    # where the package gets created
 TMP=${TMP:-/tmp}          # location for temporary files
@@ -38,11 +38,7 @@ TMP=${TMP:-/tmp}          # location for temporary files
 
 # Blacklist of packages not to use this script on (these *have* to be compiled
 # on a 32-bit box):
-BLACKLIST="
-glibc.*
-kernel.*
-gcc.*
-"
+BLACKLIST=${BLACKLIST-'glibc.* kernel.* gcc.*'}
 
 function show_help () {
   # Write the help text to output:
@@ -54,22 +50,25 @@ Usage: $0 <-i input_package_file_name> [-o output_package_file_name]
 $(basename $0) is used to convert a 64-bit Slackware package
 into a '64-bit compatibility' package, for installion on 32-bit Slackware.
 
-required parameters::
-  -i input_package_file_name     : 64-bit package to convert
-optional parameters::
-  -d destination_directory       : create package in this directory
-  -e extension                   : use another valid extension instead of 'txz'
-  -o output_package_file_name    : use custom output package filename
-  -s output_slack_desc           : custom slack-desc file to use for new package
+Required parameters:
+  -i <input_package_file_name>   64-bit package to convert
+
+Optional parameters:
+  -d <destination_directory>     Create package in this directory
+  -e <extension>                 Use another valid extension instead of 'txz'
+  -o <output_package_file_name>  Use custom output package filename (untested)
+  -s <output_slack_desc>         Custom slack-desc file to use for new package
 
 environment variables:
-  ARCH   (target architecture; defaults to \$(uname -m))
-  BUILD  (build number for output package; defaults to same as input package.
-          output_package_file_name overrides this value)
-  TAG    (build tag, defaults to ${TAG}))
-  OUTPUT (location to create the package; defaults to ${OUTPUT})
-  TMP    (location for temporary files; defaults to ${TMP})
-
+  BUILD    Build number for output package; currently same as input package;
+           <output_package_file_name> overrides this value
+  INSTALL  If non-empty, this script will go ahead and install the created
+           package
+  OUTPUT   Location to create the package; currently ${OUTPUT}
+  PKGARCH  Target architecture; currently ${PKGARCH}
+  TAG      Build tag, currently ${TAG}
+  TMP      Location for temporary files; currently ${TMP}
+ 
 EOF
 }
 
@@ -80,11 +79,11 @@ PKGFILE=""
 PKGPATH=""
 SLACKDESC=""
 
-# Parse the commandline parameters:
+# Parse the command-line parameters:
 while [ ! -z "$1" ]; do
   case $1 in
     -d|--destdir)
-      OUTPUT="$(cd ${2}; pwd)"  # can be overruled in the "-o" argument!
+      OUTPUT="$(realpath -e $2)" # can be overruled in the "-o" argument!
       shift 2
       ;;
     -e|--extension)
@@ -97,7 +96,7 @@ while [ ! -z "$1" ]; do
       ;;
     -i|--inpkg)
       PKGFILE="$(basename ${2})"
-      PKGPATH="$(cd $(dirname ${2}); pwd)/$(basename ${2})"
+      PKGPATH="$(realpath -m ${2})"
       shift 2
       ;;
     -o|--outpkg)
@@ -105,12 +104,12 @@ while [ ! -z "$1" ]; do
       # Check if the user added a directory component.  If yes, it will override
       # whatever was supplied with the "-d" argument!:
       if [ "$OUTPKG" != "${2}" ]; then
-        OUTPUT="$(cd $(dirname ${2}); pwd)"
+        OUTPUT="$(dirname $(realpath -e ${2}))"
       fi
       shift 2
       ;;
     -s|--slack-desc)
-      SLACKDESC="$(cd $(dirname ${2}); pwd)/$(basename ${2})"
+      SLACKDESC="$(realpath ${2})"
       shift 2
       ;;
     -*)
@@ -141,20 +140,33 @@ if [ -n "$OUTPUT" -a ! -d "$OUTPUT" ]; then
   fi
 fi
 
-# Figure out initial variables
-PKGNAM=$(echo $PKGFILE | rev | cut -f4- -d- | rev)
-VERSION=$(echo $PKGFILE | rev | cut -f3 -d- | rev)
-BUILD=${BUILD:-$(echo $PKGFILE | rev | cut -f1 -d- | cut -f2- -d. | rev)}
-OUTPKG=${OUTPKG:-"${PKGNAM}-compat64-${VERSION}-${ARCH}-${BUILD}${TAG}.${PKGEXT}"}
-# With OUTPKG as a command-line param, it may not just be "${PKGNAM}-compat64":
+# Example: libXres-1.2.0-x86_64-1_slack14.2.txz
+
+# Figure out initial variables.
+# This seems like going around the barn an awful lot, but I fought read for too
+# long and won't make this better now.
+REVERSED=$(echo "$PKGFILE" | rev)
+PKGNAM=$(echo "$REVERSED"                       | cut -f4- -d- | rev)
+VERSION=$(echo "$REVERSED"                      | cut -f3  -d- | rev)
+BUILD=${BUILD:-$(echo "$REVERSED" | cut -f1 -d- | cut -f2- -d. | rev)}
+PKGARCH=${PKGARCH:-$(echo "$REVERSED"           | cut -f2  -d- | rev)}
+PKGEXT=${PKGEXT:-$(echo "$PKGFILE" | rev        | cut -f1  -d. | rev)}
+# Yes, $TAG is in here twice.
+OUTPKG=${OUTPKG:-"${PKGNAM}-${TAG}-${VERSION}-${PKGARCH}-${BUILD}-${TAG}.${PKGEXT}"}
+# With OUTPKG as a command-line param, it may not just be "${PKGNAM}-compat64"
 PKGNAM64=$(echo $OUTPKG | rev | cut -f4- -d- | rev)
 
-for regex in $BLACKLIST; do
-  if echo $PKGNAM | grep -Pq "$regex"; then
-    echo "Package $PKGNAM is blacklisted by '$regex', aborting."
-    exit 2
-  fi
-done
+# echo " Got: ${PKGNAM}-${VERSION}-${PKGARCH}-${BUILD}-${PKGEXT}"
+# echo "From: $PKGFILE"
+
+if [ ! -z "${BLACKLIST}" ]; then
+  for regex in $BLACKLIST; do
+    if echo $PKGNAM | grep -Pq "$regex"; then
+      echo "Package $PKGNAM is blacklisted by '$regex', aborting."
+      exit 2
+    fi
+  done
+fi
 
 echo "Converting package $PKGNAM (version $VERSION) to $OUTPKG ($PKGNAM64)"
 
@@ -178,33 +190,6 @@ if [ -d usr/lib -o -d lib ]; then
   read JUNK
 fi
 
-# Take special care of gtk+2, gdk-pixbuf2, pango and udev when stripping things!
-
-# Remove stuff we only want from the 32-bit package:
-if [ "$PKGNAM" = "gtk+2" -o "$PKGNAM" = "gtk+3" -o "$PKGNAM" = "gdk-pixbuf2" -o "$PKGNAM" = "pango" ];
-then
-  rm -rf bin sbin usr/{include,sbin,share,info,man,libexec}
-else
-  rm -rf etc bin sbin usr/{include,sbin,share,info,man,libexec}
-fi
-
-# Take care of 64-bit binaries:
-if [ "$PKGNAM" = "gtk+2" -o "$PKGNAM" = "gtk+3" -o "$PKGNAM" = "gdk-pixbuf2" -o "$PKGNAM" = "pango" ];
-then
-  find usr/bin -type f ! -name "*-64" -exec mv -v {} {}-64 \;
-elif [ "$PKGNAM" = "llvm" ]; then
-  mkdir -p usr/bin/64
-  for BIN in usr/bin/* ; do
-    ln -s ../$(basename $BIN)-64 usr/bin/64/$(basename $BIN)
-  done
-  find usr/bin -maxdepth 1 -type f ! -name "*-64" -exec mv {} {}-64 \;
-elif [ -d usr/bin ]; then
-  mkdir ./64
-  find usr/bin -type f -exec mv {} ./64 \;
-  rm -rf usr/bin/*
-  mv ./64 usr/bin/
-fi
-
 if [ "$PKGNAM" = "udev" -o "$PKGNAM" = "eudev" ]; then
   # These are part of the 32-bit package:
   rm -rf lib/firmware
@@ -214,75 +199,75 @@ if [ "$PKGNAM" = "udev" -o "$PKGNAM" = "eudev" ]; then
 fi
 
 # Strip doinst.sh from everything we can't use:
-if [ "$PKGNAM" = "gtk+2" -o "$PKGNAM" = "gtk+3" -o "$PKGNAM" = "gdk-pixbuf2" -o "$PKGNAM" = "pango" ];
-then
-  # Get rid of symlinks in bin and doc directory:
-  cat install/doinst.sh | grep -v '( cd usr/bin' | grep -v '( cd usr/doc' \
-    > install/doinst.sh.2
-  cat install/doinst.sh.2 > install/doinst.sh
-  rm -f install/doinst.sh.2
-  if [ "$PKGNAM" = "gtk+2" ]; then
-    # Deal with the .new file in gtk+2 that does not get processed:
-    echo "config etc/gtk-2.0/im-multipress.conf.new" \
-      >> install/doinst.sh
+case "$PKGNAM" in
+  "gtk+2" | "gtk+3" | "gdk-pixbuf2" | "pango")
+    egrep -v '\( cd usr/(bin|doc)' install/doinst.sh > install/doinst.sh.2
+    cat install/doinst.sh.2 > install/doinst.sh
+    rm -f install/doinst.sh.2
+    if [ "$PKGNAM" = "gtk+2" ]; then
+      # Deal with the .new file in gtk+2 that does not get processed:
+      echo "config etc/gtk-2.0/im-multipress.conf.new" >> install/doinst.sh
+    fi
+    ;;
+  "udev" | "eudev")
+    # Get rid of symlinks in sbin and lib directory, and all the other
+    # non-symlinking-stuff:
+    grep '( cd ' install/doinst.sh | egrep -v '\(cd (sbin|lib/udev)' \
+      > install/doinst.sh.2
+    cat install/doinst.sh.2 > install/doinst.sh
+    rm -f install/doinst.sh.2
+    ;;
+  *)
+    if [ -f install/doinst.sh ]; then
+      # Check for a 'config()' section
+      if grep -q 'config()' install/doinst.sh; then
+        cat << EOT > install/doinst.sh.1
+config() {
+  NEW="\$1"
+  OLD="\$(dirname \$NEW)/\$(basename \$NEW .new)"
+  # If there's no config file by that name, mv it over:
+  if [ ! -r \$OLD ]; then
+    mv \$NEW \$OLD
+  elif [ \`md5sum < "\${OLD}"\` = \`md5sum < "\${NEW}"\` ]; then
+    # toss the redundant copy
+    rm $NEW
   fi
-elif [ "$PKGNAM" = "udev" -o "$PKGNAM" = "eudev" ]; then
-  # Get rid of symlinks in sbin and lib directory, and all the other 
-  # non-symlinking stuff:
-  cat install/doinst.sh \
-    | grep '( cd ' \
-    | grep -v '( cd sbin' | grep -v '( cd lib/udev' \
-     > install/doinst.sh.2
-  cat install/doinst.sh.2 > install/doinst.sh
-  rm -f install/doinst.sh.2
-elif [ -f install/doinst.sh ]; then
-  # Check for a 'config()' section:
-  if grep -q 'config()' install/doinst.sh ; then
-    cat <<-"EOT" > install/doinst.sh.1
-	config() {
-	  NEW="$1"
-	  OLD="$(dirname $NEW)/$(basename $NEW .new)"
-	  # If there's no config file by that name, mv it over:
-	  if [ ! -r $OLD ]; then
-	    mv $NEW $OLD
-	  elif [ "$(cat $OLD | md5sum)" = "$(cat $NEW | md5sum)" ]; then
-	    # toss the redundant copy
-	    rm $NEW
-	  fi
-	  # Otherwise, we leave the .new copy for the admin to consider...
-	}
-	preserve_perms() {
-	  NEW="$1"
-	  OLD="$(dirname ${NEW})/$(basename ${NEW} .new)"
-	  if [ -e ${OLD} ]; then
-	    cp -a ${OLD} ${NEW}.incoming
-	    cat ${NEW} > ${NEW}.incoming
-	    mv ${NEW}.incoming ${NEW}
-	  fi
-	  config ${NEW}
-	}
-	EOT
-  else
-    echo -n "" > install/doinst.sh.1
+  # Otherwise, we leave the .new copy for the admin to consider...
+}
+
+preserve_perms() {
+  NEW="\$1"
+  OLD="\$(dirname \${NEW})/\$(basename \${NEW} .new)"
+  if [ -e \${OLD} ]; then
+    cp -a \${OLD} \${NEW}.incoming
+    cat \${NEW} > \${NEW}.incoming
+    mv \${NEW}.incoming \${NEW}
   fi
-  # Only keep lines that deal with symlinks in bin/64 and lib directories,
-  # and the config/preserve_perms commands that apply outside of /etc/:
-  ( cat install/doinst.sh \
-      |grep -v "etc/ld.so.conf" |grep -v "../sbin/" \
-      |grep -Ev '(config etc|preserve_perms etc)' \
-      |grep -E '(usr/bin |lib |lib/|^config |^preserve_perms )' > install/doinst.sh.2
+  config \${NEW}
+}
+EOT
+    else
+      > install/doinst.sh.1
+    fi
+    # Only keep lines that deal with symlinks in bin64 and lib64 directories,
+    # and the config/preserve_perms commands that apply outside of /etc/:
+    set +e
+    grep -v 'etc/ld.so.conf' install/doinst.sh | \
+      egrep -v '(\.\./sbin|config etc|preserve_perms etc)' | \
+      egrep '(usr/bin |lib |lib/|^(config|preserve_perms) )' \
+      > install/doinst.sh.2
     cat install/doinst.sh.1 install/doinst.sh.2 \
-      |sed -e 's# usr/bin# usr/bin/64#g' \
-      |sed -e 's#64 ; ln -sf ../#&../#' > install/doinst.sh
-    rm -f install/doinst.sh.1 install/doinst.sh.2 ) || true
-fi
+      sed 's# usr/bin# usr/bin64#g' > install/doinst.sh
+    rm -f install/doinst.sh.1 install/doinst.sh.2
+    set -e
+  fi
+  ;;
+esac
 
 # Post-cleanup-cleanup to catch sscript errors:
 if [ "$PKGNAM" = "samba" ]; then
   # Get rid of a useless (because taken care of in 32-bit package) block:
-  cat install/doinst.sh \
-    | grep -v 'samba/private' \
-     > install/doinst.sh.2
+  grep -v 'samba/private' install/doinst.sh > install/doinst.sh.2
   cat install/doinst.sh.2 > install/doinst.sh
   rm -f install/doinst.sh.2
 fi
@@ -307,27 +292,124 @@ if [ "$PKGNAM" = "qt" -o "$PKGNAM" = "qt3" -o "$PKGNAM" = "qt5" ]; then
     done
   fi
 
-  cat install/doinst.sh | grep -v 'usr/bin' | grep -v 'opt/kde3/bin' \
-    > install/doinst.sh.2
+  egrep -v '(usr|opt/kde3)/bin' install/doinst.sh > install/doinst.sh.2
   cat install/doinst.sh.2 > install/doinst.sh
   rm -f install/doinst.sh.2
 fi
 
-# Keep documentation we might be required to keep, or just be polite:
-if [ -d usr/doc ]; then
-  find usr/doc -type f ! -iname 'Copyright*' -a ! -iname 'COPYING*' -a \
-    ! -iname 'AUTHORS*' -a ! -iname 'LICENSE*' -a ! -iname 'GPL*' -a \
-    ! -iname 'LGPL*' -a ! -iname 'THANKS*' -delete
-  find usr/doc -type d -depth | xargs -d '\n' rmdir --ignore-fail-on-non-empty
+for i in libexec bin lib sbin; do
+    if [ -d $i ]; then
+        if [ -d ${i}64 ]; then
+            echo "Unexpected: both $i and ${i}64 exist in $PWD!"
+            exit 1
+        fi
+        mv $i ${i}64
+        if [ -f install/doinst.sh ]; then
+            echo "Trying to fix up install/doinst.sh for $i ..."
+            sed -i "s#${i}/#${i}64/#g" install/doinst.sh
+        fi
+    fi
+
+    if [ -d usr/$i ]; then
+        if [ -d usr/${i}64 ]; then
+            echo "Unexpected: both usr/$i and usr/${i}64 exist in $PWD!"
+            exit 2
+        fi
+        mv usr/$i usr/${i}64
+        if [ -f install/doinst.sh ]; then
+            echo "Trying to fix up install/doinst.sh for usr/$i ..."
+            sed -i "s#${i}/#${i}64/#g" install/doinst.sh
+        fi
+    fi
+done
+
+if [ -f install/doinst.sh ]; then
+  set +e
+  for i in bin sbin lib libexec man; do
+    sed -i "s#cd usr/${i} #cd usr/${i}64 #g" install/doinst.sh
+    sed -i "s#cd ${i} #cd ${i}64 #g" install/doinst.sh
+    sed -i "s#/${i}/ #/${i}64/ #g" install/doinst.sh
+  done
+  set -e
 fi
 
-if [ ! -z $SLACKDESC ]; then
+# Keep documentation we might be required to keep, or just be polite (or not).
+if [ -d usr/doc -o -d usr/man -o -d usr/share/man ]; then
+  # find usr/doc -type f ! -iname 'Copyright*' -a ! -iname 'COPYING*' -a \
+  #   ! -iname 'AUTHORS*' -a ! -iname 'LICENSE*' -a ! -iname 'GPL*' -a \
+  #   ! -iname 'LGPL*' -a ! -iname 'THANKS*' -delete
+  # find usr/doc -type d -depth | xargs -d '\n' rmdir --ignore-fail-on-non-empty
+
+  # We already have docs, most likely, so nuke these, because they'll mess up
+  # our own docs.
+  rm -rf usr/doc usr/man usr/share/man
+  if [ -f install/doinst.sh ]; then
+    egrep -wv 'usr/(doc|(share/)?man)' install/doinst.sh > install/doinst.sh.2
+    cat install/doinst.sh.2 > install/doinst.sh
+    rm install/doinst.sh.2
+  fi
+fi
+
+find . -type f | while read LINE; do
+    if [ -f "${ROOT}/${FILE}" ]; then
+        OLDDIR=`dirname "$FILE"`
+        case "$OLDDIR" in
+            *include*) NEWDIR=`echo "$OLDDIR" | sed 's#/include#/include64#'` ;;
+            *man*) NEWDIR=`echo "$OLDDIR" | sed 's#/man#/man64#'` ;;
+            *share*) NEWDIR=`echo "$OLDDIR" | sed 's#/share#/share64#'` ;;
+            *) NEWDIR="${OLDDIR}64" ;;
+        esac
+        FNAME=`basename "$FILE"`
+
+        if [ -f "${NEWDIR}/${FNAME}" ]; then
+            echo "${PWD}/${FILE} and ${PWD}/${NEWDIR}/${FNAME} both exist!"
+            exit 3
+        fi
+        if [ ! -d "$NEWDIR" ]; then
+            mkdir -p "$NEWDIR"
+        fi
+        if zdiff -q "$FILE" "${ROOT}/${FILE}" > /dev/null; then
+            if [ -z "$VERBOSE" ]; then
+                rm -f "$FILE"
+            else
+                echo -n "Duplicate File "
+                rm -pvf "$FILE" || true
+            fi
+            if [ -f install/doinst.sh ]; then
+                grep -v "$FILE" install/doinst.sh > install/doinst.sh.2
+                cat install/doinst.sh.2 > install/doinst.sh
+                rm install/doinst.sh.2
+            fi
+        else
+            echo
+            echo "WARNING: ${ROOT}/${FILE} and $PWD/$FILE are different!"
+            echo "Trying to fix up, but it's likely to cause comical results."
+
+            if [ ! -d "$NEWDIR" ]; then
+                mkdir -p "$NEWDIR"
+            fi
+            mv -v "$FILE" "${NEWDIR}/${FNAME}"
+            if [ -f install/doinst.sh ]; then
+                echo "Trying to fix up install/doinst.sh ..."
+                sed -i "s#${FILE}#${NEWDIR}/${FNAME}#g" install/doinst.sh
+            fi
+        fi
+    fi
+done
+
+echo
+
+# Nuke empty directories.
+find . -type d -empty -delete
+
+if [ ! -z "$SLACKDESC" ]; then
   echo "Using externally provided slack-desc ($SLACKDESC)..."
-  cat $SLACKDESC > install/slack-desc
+  cat "$SLACKDESC" > install/slack-desc
 else
   if [ ! -f install/slack-desc ]; then
     # Non-standard package, missing slack-desc, so we use a template:
     mkdir -p install
+    SPACES=`echo -n "$PKGNAM64" | awk '{ printf "%*s", length, "" }'`
     cat <<EOT > install/slack-desc
 # HOW TO EDIT THIS FILE:
 # The "handy ruler" below makes it easier to edit a package description.  Line
@@ -336,18 +418,18 @@ else
 # make exactly 11 lines for the formatting to be correct.  It's also
 # customary to leave one space after the ':'.
 
-       |-----handy-ruler------------------------------------------------------|
-$PKGNAM: $PKGNAM 
-$PKGNAM:
-$PKGNAM:
-$PKGNAM:
-$PKGNAM:
-$PKGNAM:
-$PKGNAM:
-$PKGNAM:
-$PKGNAM:
-$PKGNAM:
-$PKGNAM:
+$SPACES|-----handy-ruler------------------------------------------------------|
+$PKGNAM64: $PKGNAM64 (description of $PKGNAM64)
+$PKGNAM64:
+$PKGNAM64:
+$PKGNAM64:
+$PKGNAM64:
+$PKGNAM64:
+$PKGNAM64:
+$PKGNAM64:
+$PKGNAM64:
+$PKGNAM64:
+$PKGNAM64: This package contains 64-bit compatibility binaries.
 EOT
   fi
 
@@ -374,7 +456,10 @@ if [ ! -s install/doinst.sh ]; then
 fi
 
 # Make the package (don't process the symlinks):
-/sbin/makepkg --linkadd n --chown n $OUTPUT/$OUTPKG
+/sbin/makepkg --linkadd n --chown y "OUTPUT"/"$OUTPKG"
 
-echo "Package created:  $OUTPUT/$OUTPKG"
+echo "Package created as $OUTPUT/$OUTPKG"
 
+if [ ! -z "$INSTALL" ]; then
+  upgradepkg --install-new "$PWD/$OUTPKG"
+fi
