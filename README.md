@@ -1,7 +1,6 @@
 __WARNING * WARNING * WARNING * WARNING * WARNING * WARNING * WARNING * WARNING__
 
-This has not been tested at all and is currently a naive transposition of "32"
-and "64" throughout the scripts.
+This been poorly tested and is very much a work in progress.
 
 Use at your own risk.
 
@@ -70,7 +69,7 @@ A typical invocation of the 'configure' command as an example:
 
 # Keeping your multilib environment up to date
 
-The third-party program 'compat32pkg' is able to keep 32-bit on 64-bit
+The third-party program `compat32pkg` is able to keep 32-bit on 64-bit
 multilib packages up to date for Slackware64.  It works similarly to
 slackpkg for regular Slackware.  See
 [compat32pkg.sourceforge.net](http://compat32pkg.sourceforge.net).
@@ -83,4 +82,8 @@ Originally by Eric Hameleers <alien@slackware.com> 15-Nov-2010
 
 Minor modifications by Ben Stern <bas-github@fortian.com> 23-Mar-2018
 
-Licensed under CC Attribution-Share Alike 4.0 International
+Licensed under [CC Attribution-Share Alike 4.0
+International](https://creativecommons.org/licenses/by/4.0/), except for
+`qemu-binfmt-conf.sh`, which is based upon
+[QEMU](https://github.com/qemu/qemu/blob/master/scripts/qemu-binfmt-conf.sh)'s
+script of the same name, and is licensed under the GPL version 2.
