@@ -73,7 +73,7 @@ A typical invocation of the 'configure' command as an example:
 The third-party program 'compat32pkg' is able to keep 32-bit on 64-bit
 multilib packages up to date for Slackware64.  It works similarly to
 slackpkg for regular Slackware.  See
-(compat32pkg.sourceforge.net)[http://compat32pkg.sourceforge.net].
+[compat32pkg.sourceforge.net](http://compat32pkg.sourceforge.net).
 [However, no such program yet exists for 32-bit Slackware, to the best of my
 knowledge.  -BAS]
 
