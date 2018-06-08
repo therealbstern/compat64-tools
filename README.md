@@ -75,7 +75,7 @@ multilib packages up to date for Slackware64.  It works similarly to
 slackpkg for regular Slackware.  See
 [compat32pkg.sourceforge.net](http://compat32pkg.sourceforge.net).
 [However, no such program yet exists for 32-bit Slackware, to the best of my
-knowledge.  -BAS]
+knowledge.  -therealbstern]
 
 ---
 
