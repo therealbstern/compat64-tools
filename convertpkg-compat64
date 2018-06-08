@@ -36,16 +36,21 @@ TMP=${TMP:-/tmp}          # location for temporary files
 # $BUILD can also be overridden, though it in-turn is overridden if an output
 # package name is specified on the command line.
 
-# Blacklist of packages not to use this script on (these *have* to be compiled
-# on a 32-bit box):
-BLACKLIST=${BLACKLIST-'glibc.* kernel.* gcc.*'}
+# Blacklist of packages not to use this script on (these allegedly *have* to be
+# compiled on a 32-bit box).
+# Let's live dangerously.
+#BLACKLIST=${BLACKLIST-'glibc.* kernel.* gcc.*'}
 
 function show_help () {
   # Write the help text to output:
   cat <<EOF
 
-Usage: $0 <-i input_package_file_name> [-o output_package_file_name]
-  [-d output_directory] [-s custom_slack_desc] [-e custom_package_extension]
+Usage:
+$0 <-i input_package_file_name> [-d output_directory]
+    [-s custom_slack_desc] [-e custom_package_extension]
+or
+$0 <input_package_file_name> [output_directory
+    [custom_slack_desc [custom_package_extension]]]
 
 $(basename $0) is used to convert a 64-bit Slackware package
 into a '64-bit compatibility' package, for installion on 32-bit Slackware.
@@ -56,7 +61,6 @@ Required parameters:
 Optional parameters:
   -d <destination_directory>     Create package in this directory
   -e <extension>                 Use another valid extension instead of 'txz'
-  -o <output_package_file_name>  Use custom output package filename (untested)
   -s <output_slack_desc>         Custom slack-desc file to use for new package
 
 environment variables:
@@ -73,7 +77,6 @@ EOF
 }
 
 # Zero some initial variables:
-OUTPKG=""
 PKGEXT="txz"
 PKGFILE=""
 PKGPATH=""
@@ -81,9 +84,10 @@ SLACKDESC=""
 
 # Parse the command-line parameters:
 while [ ! -z "$1" ]; do
-  case $1 in
+  #echo "Looking at: $1"
+  case "$1" in
     -d|--destdir)
-      OUTPUT="$(realpath -e $2)" # can be overruled in the "-o" argument!
+      OUTPUT="$(realpath -e $2)"
       shift 2
       ;;
     -e|--extension)
@@ -97,15 +101,7 @@ while [ ! -z "$1" ]; do
     -i|--inpkg)
       PKGFILE="$(basename ${2})"
       PKGPATH="$(realpath -m ${2})"
-      shift 2
-      ;;
-    -o|--outpkg)
-      OUTPKG="$(basename ${2})"
-      # Check if the user added a directory component.  If yes, it will override
-      # whatever was supplied with the "-d" argument!:
-      if [ "$OUTPKG" != "${2}" ]; then
-        OUTPUT="$(dirname $(realpath -e ${2}))"
-      fi
+      #echo "PKGFILE: $PKGFILE; PKGPATH: $PKGPATH"
       shift 2
       ;;
     -s|--slack-desc)
@@ -113,11 +109,23 @@ while [ ! -z "$1" ]; do
       shift 2
       ;;
     -*)
-      echo "Unsupported parameter '$1'!"
+      echo "Unsupported parameter: ${1}!"
       exit 1
       ;;
     *)
-      # Do nothing
+      if [ -z "$PKGFILE" ]; then
+	PKGFILE="$(basename ${1})"
+	PKGPATH="$(realpath -m ${1})"
+      elif [ -z "$OUTPUT" ]; then
+        OUTPUT="$(realpath -e ${1})"
+      elif [ -z "$SLACKDESC" ]; then
+	SLACKDESC="$(realpath ${1})"
+      elif [ -z "$PKGEXT" ]; then
+	PKGEXT="${1}"
+      else
+	echo "Extra argument: ${1}"
+	exit 2
+      fi
       shift
       ;;
   esac
@@ -130,13 +138,14 @@ if [ -z "$PKGFILE" -o ! -e "$PKGPATH" ]; then
   exit 3
 fi
 
-# if a destination_directory was specified, abort now if we can not create it:
+# If a destination_directory was specified, abort now if we can not create it.
+# Since we've set -e, it's unlikely this will actually trigger, but whatever.
 if [ -n "$OUTPUT" -a ! -d "$OUTPUT" ]; then
   echo "Creating output directory '$OUTPUT'..."
   mkdir -p $OUTPUT
   if [ ! -w "$OUTPUT" ]; then
     echo "Creating output directory '$OUTPUT' failed!"
-    exit 3
+    exit 4
   fi
 fi
 
@@ -153,33 +162,32 @@ PKGARCH=${PKGARCH:-$(echo "$REVERSED"           | cut -f2  -d- | rev)}
 PKGEXT=${PKGEXT:-$(echo "$PKGFILE" | rev        | cut -f1  -d. | rev)}
 # Yes, $TAG is in here twice.
 OUTPKG=${OUTPKG:-"${PKGNAM}-${TAG}-${VERSION}-${PKGARCH}-${BUILD}-${TAG}.${PKGEXT}"}
-# With OUTPKG as a command-line param, it may not just be "${PKGNAM}-compat64"
-PKGNAM64=$(echo $OUTPKG | rev | cut -f4- -d- | rev)
+PKGNAM64="${PKGNAM}-compat64"
 
-# echo " Got: ${PKGNAM}-${VERSION}-${PKGARCH}-${BUILD}-${PKGEXT}"
-# echo "From: $PKGFILE"
+#echo " Got: ${PKGNAM}-${TAG}-${VERSION}-${PKGARCH}-${BUILD}-${TAG}.${PKGEXT}"
+#echo "From: $PKGFILE"
 
 if [ ! -z "${BLACKLIST}" ]; then
   for regex in $BLACKLIST; do
     if echo $PKGNAM | grep -Pq "$regex"; then
       echo "Package $PKGNAM is blacklisted by '$regex', aborting."
-      exit 2
+      exit 5
     fi
   done
 fi
 
-echo "Converting package $PKGNAM (version $VERSION) to $OUTPKG ($PKGNAM64)"
+#echo "Converting package $PKGNAM (version $VERSION) to $OUTPKG ($PKGNAM64)"
 
-PKG=$TMP/package-$PKGNAM64
-rm -rf $PKG
-mkdir -p $PKG $TMP
-cd $PKG || exit 1
+PKG="$TMP/package-$PKGNAM64"
+rm -rf "$PKG"
+mkdir -p "$PKG" "$TMP"
+cd "$PKG"
 
 # Explode the package into ${PKG}.  We will need to slightly modify an existing
 # install/doinst.sh; it should still create symlinks and run other errands when
 # the resulting package is installed, but should not mess with the files we are
 # going to remove for the -compat64 package.
-/sbin/explodepkg $PKGPATH
+/sbin/explodepkg "$PKGPATH"
 
 # Check if the user fed us a 32-bit package:
 if [ -d usr/lib -o -d lib ]; then
@@ -197,6 +205,14 @@ if [ "$PKGNAM" = "udev" -o "$PKGNAM" = "eudev" ]; then
   rm -rf lib/udev
   rm -rf run
 fi
+
+#if [ -f install/doinst.sh ]; then
+#  echo
+#  echo "Old contents of install/doinst.sh:"
+#  echo
+#  cat install/doinst.sh
+#  echo
+#fi
 
 # Strip doinst.sh from everything we can't use:
 case "$PKGNAM" in
@@ -221,6 +237,7 @@ case "$PKGNAM" in
     if [ -f install/doinst.sh ]; then
       # Check for a 'config()' section
       if grep -q 'config()' install/doinst.sh; then
+	#echo "Found config section in install/doinst.sh"
         cat << EOT > install/doinst.sh.1
 config() {
   NEW="\$1"
@@ -247,22 +264,30 @@ preserve_perms() {
 }
 EOT
     else
-      > install/doinst.sh.1
+      touch install/doinst.sh.1
     fi
     # Only keep lines that deal with symlinks in bin64 and lib64 directories,
     # and the config/preserve_perms commands that apply outside of /etc/:
     set +e
-    grep -v 'etc/ld.so.conf' install/doinst.sh | \
-      egrep -v '(\.\./sbin|config etc|preserve_perms etc)' | \
-      egrep '(usr/bin |lib |lib/|^(config|preserve_perms) )' \
-      > install/doinst.sh.2
-    cat install/doinst.sh.1 install/doinst.sh.2 \
-      sed 's# usr/bin# usr/bin64#g' > install/doinst.sh
+    grep -v 'etc/ld.so.conf' install/doinst.sh | 
+      egrep -v '(\.\./sbin64|(config|preserve_perms) etc)' | \
+      egrep '((usr/bin64|lib64)( |/)|^(config|preserve_perms) )' \
+      > install/doinst.sh.2 || :
+    cat install/doinst.sh.1 install/doinst.sh.2 | \
+      sed 's# usr/bin/# usr/bin64/#g' > install/doinst.sh
     rm -f install/doinst.sh.1 install/doinst.sh.2
     set -e
   fi
   ;;
 esac
+
+#if [ -f install/doinst.sh ]; then
+#  echo
+#  echo "New contents of install/doinst.sh:"
+#  echo
+#  cat install/doinst.sh
+#  echo
+#fi
 
 # Post-cleanup-cleanup to catch sscript errors:
 if [ "$PKGNAM" = "samba" ]; then
@@ -297,11 +322,11 @@ if [ "$PKGNAM" = "qt" -o "$PKGNAM" = "qt3" -o "$PKGNAM" = "qt5" ]; then
   rm -f install/doinst.sh.2
 fi
 
-for i in libexec bin lib sbin; do
+for i in libexec bin lib sbin etc include; do
     if [ -d $i ]; then
         if [ -d ${i}64 ]; then
             echo "Unexpected: both $i and ${i}64 exist in $PWD!"
-            exit 1
+            exit 6
         fi
         mv $i ${i}64
         if [ -f install/doinst.sh ]; then
@@ -313,7 +338,7 @@ for i in libexec bin lib sbin; do
     if [ -d usr/$i ]; then
         if [ -d usr/${i}64 ]; then
             echo "Unexpected: both usr/$i and usr/${i}64 exist in $PWD!"
-            exit 2
+            exit 7
         fi
         mv usr/$i usr/${i}64
         if [ -f install/doinst.sh ]; then
@@ -325,7 +350,7 @@ done
 
 if [ -f install/doinst.sh ]; then
   set +e
-  for i in bin sbin lib libexec man; do
+  for i in bin sbin lib libexec; do
     sed -i "s#cd usr/${i} #cd usr/${i}64 #g" install/doinst.sh
     sed -i "s#cd ${i} #cd ${i}64 #g" install/doinst.sh
     sed -i "s#/${i}/ #/${i}64/ #g" install/doinst.sh
@@ -342,9 +367,9 @@ if [ -d usr/doc -o -d usr/man -o -d usr/share/man ]; then
 
   # We already have docs, most likely, so nuke these, because they'll mess up
   # our own docs.
-  rm -rf usr/doc usr/man usr/share/man
+  rm -rf usr/doc usr/man usr/share/man usr/share/gtk-doc
   if [ -f install/doinst.sh ]; then
-    egrep -wv 'usr/(doc|(share/)?man)' install/doinst.sh > install/doinst.sh.2
+    egrep -wv 'usr/(doc|man|share/(man|gtk-doc))' install/doinst.sh > install/doinst.sh.2
     cat install/doinst.sh.2 > install/doinst.sh
     rm install/doinst.sh.2
   fi
@@ -363,7 +388,7 @@ find . -type f | while read LINE; do
 
         if [ -f "${NEWDIR}/${FNAME}" ]; then
             echo "${PWD}/${FILE} and ${PWD}/${NEWDIR}/${FNAME} both exist!"
-            exit 3
+            exit 8
         fi
         if [ ! -d "$NEWDIR" ]; then
             mkdir -p "$NEWDIR"
@@ -397,7 +422,7 @@ find . -type f | while read LINE; do
     fi
 done
 
-echo
+#echo
 
 # Nuke empty directories.
 find . -type d -empty -delete
@@ -456,9 +481,10 @@ if [ ! -s install/doinst.sh ]; then
 fi
 
 # Make the package (don't process the symlinks):
-/sbin/makepkg --linkadd n --chown y "OUTPUT"/"$OUTPKG"
+#echo "About to run: /sbin/makepkg --linkadd n --chown y $OUTPUT/$OUTPKG"
+/sbin/makepkg --linkadd n --chown y "$OUTPUT"/"$OUTPKG"
 
-echo "Package created as $OUTPUT/$OUTPKG"
+echo "Package created as: $OUTPUT/$OUTPKG"
 
 if [ ! -z "$INSTALL" ]; then
   upgradepkg --install-new "$PWD/$OUTPKG"
