@@ -369,57 +369,66 @@ if [ -d usr/doc -o -d usr/man -o -d usr/share/man ]; then
   # our own docs.
   rm -rf usr/doc usr/man usr/share/man usr/share/gtk-doc
   if [ -f install/doinst.sh ]; then
-    egrep -wv 'usr/(doc|man|share/(man|gtk-doc))' install/doinst.sh > install/doinst.sh.2
+    egrep -wv 'usr/(doc|man|share/(man|gtk-doc))' install/doinst.sh > install/doinst.sh.2 || true
     cat install/doinst.sh.2 > install/doinst.sh
     rm install/doinst.sh.2
   fi
 fi
 
-find . -type f | while read LINE; do
-    if [ -f "${ROOT}/${FILE}" ]; then
-        OLDDIR=`dirname "$FILE"`
-        case "$OLDDIR" in
-            *include*) NEWDIR=`echo "$OLDDIR" | sed 's#/include#/include64#'` ;;
-            *man*) NEWDIR=`echo "$OLDDIR" | sed 's#/man#/man64#'` ;;
-            *share*) NEWDIR=`echo "$OLDDIR" | sed 's#/share#/share64#'` ;;
-            *) NEWDIR="${OLDDIR}64" ;;
-        esac
-        FNAME=`basename "$FILE"`
+# for i in include man share; do
+#   if [ -d usr/${i} ]; then
+#     mv -vi usr/${i} usr/${i}64
+#   fi
+# done
 
-        if [ -f "${NEWDIR}/${FNAME}" ]; then
-            echo "${PWD}/${FILE} and ${PWD}/${NEWDIR}/${FNAME} both exist!"
-            exit 8
-        fi
-        if [ ! -d "$NEWDIR" ]; then
-            mkdir -p "$NEWDIR"
-        fi
-        if zdiff -q "$FILE" "${ROOT}/${FILE}" > /dev/null; then
-            if [ -z "$VERBOSE" ]; then
-                rm -f "$FILE"
-            else
-                echo -n "Duplicate File "
-                rm -pvf "$FILE" || true
-            fi
-            if [ -f install/doinst.sh ]; then
-                grep -v "$FILE" install/doinst.sh > install/doinst.sh.2
-                cat install/doinst.sh.2 > install/doinst.sh
-                rm install/doinst.sh.2
-            fi
-        else
-            echo
-            echo "WARNING: ${ROOT}/${FILE} and $PWD/$FILE are different!"
-            echo "Trying to fix up, but it's likely to cause comical results."
+set -x
+pwd
 
-            if [ ! -d "$NEWDIR" ]; then
-                mkdir -p "$NEWDIR"
-            fi
-            mv -v "$FILE" "${NEWDIR}/${FNAME}"
-            if [ -f install/doinst.sh ]; then
-                echo "Trying to fix up install/doinst.sh ..."
-                sed -i "s#${FILE}#${NEWDIR}/${FNAME}#g" install/doinst.sh
-            fi
-        fi
+find . -type f | while read FILE; do
+  if [ -f "${ROOT}/${FILE}" ]; then
+    OLDDIR=`dirname "$FILE"`
+    case "$OLDDIR" in
+      *include*) NEWDIR=`echo "$OLDDIR" | sed 's#/include#/include64#'` ;;
+      *man*) NEWDIR=`echo "$OLDDIR" | sed 's#/man#/man64#'` ;;
+      *share*) NEWDIR=`echo "$OLDDIR" | sed 's#/share#/share64#'` ;;
+      *) NEWDIR="${OLDDIR}64" ;;
+    esac
+    FNAME=`basename "$FILE"`
+
+    if [ -f "${NEWDIR}/${FNAME}" ]; then
+      echo "${PWD}/${FILE} and ${PWD}/${NEWDIR}/${FNAME} both exist!"
+      exit 8
     fi
+    if [ ! -d "$NEWDIR" ]; then
+      mkdir -p "$NEWDIR"
+    fi
+    if zdiff -q "$FILE" "${ROOT}/${FILE}" > /dev/null; then
+      if [ -z "$VERBOSE" ]; then
+        rm -f "$FILE"
+      else
+        echo -n "Duplicate File "
+        rm -pvf "$FILE" || true
+      fi
+      if [ -f install/doinst.sh ]; then
+        grep -v "$FILE" install/doinst.sh > install/doinst.sh.2 && \
+        cat install/doinst.sh.2 > install/doinst.sh &&
+        rm install/doinst.sh.2 || true
+      fi
+    else
+      echo
+      echo "WARNING: ${ROOT}/${FILE} and $PWD/$FILE are different!"
+      echo "Trying to fix up, but it's likely to cause comical results."
+
+      if [ ! -d "$NEWDIR" ]; then
+        mkdir -p "$NEWDIR"
+      fi
+      mv -v "$FILE" "${NEWDIR}/${FNAME}"
+      if [ -f install/doinst.sh ]; then
+        echo "Trying to fix up install/doinst.sh ..."
+        sed -i "s#${FILE}#${NEWDIR}/${FNAME}#g" install/doinst.sh
+      fi
+    fi
+  fi
 done
 
 #echo
