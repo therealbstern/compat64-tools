@@ -348,10 +348,32 @@ for i in libexec bin lib sbin etc include; do
     fi
 done
 
-if [ -d usr/include64 ]; then
-  (cd usr/include64 && \
-    find . -type f -exec diff -q {} ${ROOT}/usr/include/{} \; -delete)
+if [ -d usr/bin/64 ]; then
+  if [ ! -d usr/bin64 ]; then
+    mkdir usr/bin64
+  fi
+  cd usr/bin/64
+  for i in *; do
+    if [ -e "../bin64/$i" ]; then
+      echo "Unexpected: both usr/bin/64$i and usr/bin64/$i exist!"
+      exit 9
+    elif [ -e "$1" ]; then
+      mv "$1" ../bin64/
+      set +e
+      sed -i "s#usr/bin/64/$1#usr/bin64/$1#g" ../../../install/doinst.sh
+      set -e
+    fi
+  done
+  cd ../../..
 fi
+
+for i in include share; do
+  if [ -d "usr/${i}64" ]; then
+    cd "usr/${i}64"
+    find . -type f -exec diff -q {} "${ROOT}/usr/${i}/{}" \; -delete
+    cd ../..
+  fi
+done
 
 find usr -type d -empty -delete
 
@@ -388,8 +410,8 @@ fi
 #   fi
 # done
 
-set -x
-pwd
+#set -x
+#pwd
 
 find . -type f | while read FILE; do
   if [ -f "${ROOT}/${FILE}" ]; then
@@ -503,5 +525,12 @@ fi
 echo "Package created as: $OUTPUT/$OUTPKG"
 
 if [ ! -z "$INSTALL" ]; then
-  upgradepkg --install-new "$PWD/$OUTPKG"
+  upgradepkg --install-new "$OUTPUT/$OUTPKG"
+fi
+
+cd 
+
+# Clean up - and be a little paranoid - we *are* running with root privileges
+if [ -d "$PKG" -a "`dirname \"$PKG\"`" != "/" ]; then
+  rm -rf "$PKG"
 fi
