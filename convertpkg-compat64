@@ -348,9 +348,16 @@ for i in libexec bin lib sbin etc include; do
     fi
 done
 
+if [ -d usr/include64 ]; then
+  (cd usr/include64 && \
+    find . -type f -exec diff -q {} ${ROOT}/usr/include/{} \; -delete)
+fi
+
+find usr -type d -empty -delete
+
 if [ -f install/doinst.sh ]; then
   set +e
-  for i in bin sbin lib libexec; do
+  for i in libexec bin lib sbin etc include; do
     sed -i "s#cd usr/${i} #cd usr/${i}64 #g" install/doinst.sh
     sed -i "s#cd ${i} #cd ${i}64 #g" install/doinst.sh
     sed -i "s#/${i}/ #/${i}64/ #g" install/doinst.sh
